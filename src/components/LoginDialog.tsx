@@ -28,6 +28,7 @@ export const LoginDialog: React.FC<
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
   const [loginMethod, setLoginMethod] = useState<'keychain' | 'hiveauth' | 'privateKey'>('keychain');
   const [privateKey, setPrivateKey] = useState('');
+  const [privateActiveKey, setPrivateActiveKey] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isKeychainEnabled, setIsKeychainEnabled] = useState(false);
 
@@ -52,7 +53,7 @@ export const LoginDialog: React.FC<
       await new Promise((res) => setTimeout(res, 500));
       const isEnabled = aioha.isProviderEnabled(Providers.Keychain);
       setIsKeychainEnabled(isEnabled);
-      console.log('is it keychain enabled?', isEnabled);
+      // console.log('is it keychain enabled?', isEnabled);
       if (isEnabled) {
         setLoginMethod('keychain');
       } else {
@@ -160,7 +161,13 @@ export const LoginDialog: React.FC<
           hiveResult = await AuthService.loginWithHiveAuth(aioha, username.trim(), proof);
           break;
         case 'privateKey':
-          hiveResult = await AuthService.loginWithPrivatePostingKey(aioha, username.trim(), privateKey.trim(), proof);
+          hiveResult = await AuthService.loginWithPrivatePostingKey(
+            aioha,
+            username.trim(),
+            privateKey.trim(),
+            proof,
+            privateActiveKey.trim() || undefined
+          );
           break;
         default:
           throw new Error('Invalid login method selected');
@@ -318,26 +325,47 @@ export const LoginDialog: React.FC<
               </div>
             </div>
 
-            {/* Private Key Input Field - Only show when private key method is selected */}
+            {/* Private Key Input Fields - Only show when private key method is selected */}
             {loginMethod === 'privateKey' && (
-              <div className="form-control w-full mt-4">
-                <label className="label">
-                  <span className="label-text">Posting Key</span>
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter your private posting key"
-                  className={`input input-bordered w-full ${
-                    theme === "dark"
-                      ? "bg-gray-800 text-white border-gray-600"
-                      : "bg-gray-100 text-black border-gray-300"
-                  }`}
-                  value={privateKey}
-                  onChange={(e) => setPrivateKey(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                />
-              </div>
+              <>
+                <div className="form-control w-full mt-4">
+                  <label className="label">
+                    <span className="label-text">Posting Key</span>
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter your private posting key"
+                    className={`input input-bordered w-full ${
+                      theme === "dark"
+                        ? "bg-gray-800 text-white border-gray-600"
+                        : "bg-gray-100 text-black border-gray-300"
+                    }`}
+                    value={privateKey}
+                    onChange={(e) => setPrivateKey(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="form-control w-full mt-4">
+                  <label className="label">
+                    <span className="label-text">Active Key</span>
+                    <span className="label-text-alt text-gray-500">(optional)</span>
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter your private active key (optional)"
+                    className={`input input-bordered w-full ${
+                      theme === "dark"
+                        ? "bg-gray-800 text-white border-gray-600"
+                        : "bg-gray-100 text-black border-gray-300"
+                    }`}
+                    value={privateActiveKey}
+                    onChange={(e) => setPrivateActiveKey(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isLoading}
+                  />
+                </div>
+              </>
             )}
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-3 text-center">

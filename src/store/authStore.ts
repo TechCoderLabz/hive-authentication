@@ -134,6 +134,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
           proof: hiveResult.proof,
           serverResponse,
           privatePostingKey: hiveResult.privatePostingKey,
+          privateActiveKey: hiveResult.privateActiveKey,
         };
         
         // Add to store

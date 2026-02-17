@@ -7,6 +7,7 @@ export interface HiveAuthResult {
   username: string;
   proof: string;      // This will be the timestamp
   privatePostingKey?: string;
+  privateActiveKey?: string; // Optional active key (private key login only)
 }
 
 export interface ServerAuthResponse {
@@ -22,6 +23,7 @@ export interface LoggedInUser {
   proof: string;
   serverResponse: string; // JSON string from dev's app
   privatePostingKey?: string;
+  privateActiveKey?: string; // Optional active key (private key login only)
 }
 
 export interface AuthStore {
