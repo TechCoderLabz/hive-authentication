@@ -35,15 +35,15 @@ function App() {
       const currentUser = state.currentUser;
       // Detect login/logout/user switch
       if (currentUser && !previousUser) {
-        console.log("User logged in:", currentUser);
+        // console.log("User logged in:", currentUser);
       } else if (!currentUser && previousUser) {
-        console.log("User logged out:", previousUser);
+        // console.log("User logged out:", previousUser);
       } else if (
         currentUser &&
         previousUser &&
         currentUser.username !== previousUser.username
       ) {
-        console.log("User switched to:", currentUser);
+        // console.log("User switched to:", currentUser);
       }
       previousUser = currentUser;
     });
@@ -58,7 +58,7 @@ function App() {
   const handleAuthenticate = async (
     hiveResult: HiveAuthResult
   ): Promise<string> => {
-    console.log("Hive authentication result:", hiveResult);
+    // console.log("Hive authentication result:", hiveResult);
 
     try {
       const response = await fetch("https://beta-api.distriator.com/login", {
@@ -79,7 +79,7 @@ function App() {
       }
 
       const data = await response.json();
-      console.log('Server response:', data);
+      // console.log('Server response:', data);
 
       // Return your server response as JSON string
       return JSON.stringify(data);
@@ -91,17 +91,17 @@ function App() {
 
   const handleProgrammaticLogin = async () => {
     const userInfo = await loginWithPrivateKey(user, key, async (hiveResult) => {
-        console.log("Hive result:", hiveResult);
+        // console.log("Hive result:", hiveResult);
         // TODO: Add server validation
         return JSON.stringify({ message: "Server validation successful" });
     });
-    console.log("User logged in:", userInfo);
+    // console.log("User logged in:", userInfo);
   };
 
   const handleProgrammaticLogout = async () => {
     try {
       await logout();
-      console.log("User logged out");
+      // console.log("User logged out");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -141,8 +141,9 @@ function App() {
                   onAuthenticate={handleAuthenticate}
                   aioha={aioha}
                   onClose={() => {
-                    console.log("AuthButton dialog closed");
+                    // console.log("AuthButton dialog closed");
                   }}
+                  isActiveFieldVisible={true}
                   onSignMessage={(username) => {
                     return `${new Date().toISOString()}:${username}`;
                   }}

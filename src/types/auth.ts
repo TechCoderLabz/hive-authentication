@@ -7,6 +7,7 @@ export interface HiveAuthResult {
   username: string;
   proof: string;      // This will be the timestamp
   privatePostingKey?: string;
+  privateActiveKey?: string; // Optional active key (private key login only)
 }
 
 export interface ServerAuthResponse {
@@ -22,6 +23,7 @@ export interface LoggedInUser {
   proof: string;
   serverResponse: string; // JSON string from dev's app
   privatePostingKey?: string;
+  privateActiveKey?: string; // Optional active key (private key login only)
 }
 
 export interface AuthStore {
@@ -54,6 +56,7 @@ export interface SwitchUserModalProps {
   onAuthenticate?: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;
+  isActiveFieldVisible?: boolean;
   onSignMessage: (username: string) => string;
 }
 
@@ -65,12 +68,16 @@ export interface LoginDialogProps {
   onAuthenticate?: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   onSignMessage: (username: string) => string;
+  /** When true, shows optional Active Key field in private key login. Default: false */
+  isActiveFieldVisible?: boolean;
 }
 
 export interface AuthButtonProps {
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;
+  /** When true, shows optional Active Key field in private key login. Default: false */
+  isActiveFieldVisible?: boolean;
   onClose?: () => void;
   onSignMessage: (username: string) => string;
 }
