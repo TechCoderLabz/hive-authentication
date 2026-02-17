@@ -19,6 +19,7 @@ export const LoginDialog: React.FC<
   aioha,
   onSignMessage,
   theme = "light",
+  isActiveFieldVisible = false,
 }) => {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -346,25 +347,27 @@ export const LoginDialog: React.FC<
                     disabled={isLoading}
                   />
                 </div>
-                <div className="form-control w-full mt-4">
-                  <label className="label">
-                    <span className="label-text">Active Key</span>
-                    <span className="label-text-alt text-gray-500">(optional)</span>
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Enter your private active key (optional)"
-                    className={`input input-bordered w-full ${
-                      theme === "dark"
-                        ? "bg-gray-800 text-white border-gray-600"
-                        : "bg-gray-100 text-black border-gray-300"
-                    }`}
-                    value={privateActiveKey}
-                    onChange={(e) => setPrivateActiveKey(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    disabled={isLoading}
-                  />
-                </div>
+                {isActiveFieldVisible && (
+                  <div className="form-control w-full mt-4">
+                    <label className="label">
+                      <span className="label-text">Active Key</span>
+                      <span className="label-text-alt text-gray-500">(optional)</span>
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Enter your private active key (optional)"
+                      className={`input input-bordered w-full ${
+                        theme === "dark"
+                          ? "bg-gray-800 text-white border-gray-600"
+                          : "bg-gray-100 text-black border-gray-300"
+                      }`}
+                      value={privateActiveKey}
+                      onChange={(e) => setPrivateActiveKey(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
               </>
             )}
             <div className="mt-4">

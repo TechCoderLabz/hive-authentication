@@ -30,12 +30,23 @@ The Hive Authentication Package provides a flexible, callback-based authenticati
 
 The main authentication button component.
 
-**Props**: None
+**Props**:
+```tsx
+interface AuthButtonProps {
+  onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
+  aioha: Aioha;
+  shouldShowSwitchUser?: boolean;   // default: true
+  isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key field in private key login
+  onClose?: () => void;
+  onSignMessage: (username: string) => string;
+}
+```
 
 **Behavior**:
 - Shows "Login" if no user is logged in
 - Shows user avatar if logged in
 - Opens login modal or switch user modal on click
+- When `isActiveFieldVisible` is `true`, the private key login option shows an optional "Active Key" field; the key is validated against the account’s active authority and passed to your callback as `hiveResult.privateActiveKey`.
 
 **Example**:
 ```tsx
@@ -46,9 +57,11 @@ function App() {
     <div>
       <h1>My App</h1>
       <AuthButton
-      onSignMessage={() => {
-        return new Date().toISOString();
-      }}
+        onAuthenticate={handleAuthenticate}
+        aioha={aioha}
+        shouldShowSwitchUser={true}
+        isActiveFieldVisible={false}
+        onSignMessage={(username) => new Date().toISOString() + ':' + username}
       />
     </div>
   );
@@ -57,7 +70,7 @@ function App() {
 
 ### `LoginDialog`
 
-Modal dialog for user login.
+Modal dialog for user login. Supports Keychain, HiveAuth, and private key (posting key) login. When `isActiveFieldVisible` is true, private key login also shows an optional Active Key field.
 
 **Props**:
 ```tsx
@@ -66,6 +79,10 @@ interface LoginDialogProps {
   onClose: () => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  onAuthenticate?: (hiveResult: HiveAuthResult) => Promise<string>;
+  aioha: Aioha;
+  onSignMessage: (username: string) => string;
+  isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key in private key login
 }
 ```
 
@@ -81,6 +98,9 @@ function MyLogin() {
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
       showBackButton={false}
+      aioha={aioha}
+      onSignMessage={(username) => new Date().toISOString() + ':' + username}
+      isActiveFieldVisible={false}
     />
   );
 }
@@ -88,13 +108,18 @@ function MyLogin() {
 
 ### `SwitchUserModal`
 
-Modal for managing multiple logged-in users.
+Modal for managing multiple logged-in users. When "Add Account" is used, it opens `LoginDialog` and forwards `isActiveFieldVisible` so the optional Active Key field behavior matches the main login.
 
 **Props**:
 ```tsx
 interface SwitchUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onAuthenticate?: (hiveResult: HiveAuthResult) => Promise<string>;
+  aioha: Aioha;
+  shouldShowSwitchUser?: boolean;
+  isActiveFieldVisible?: boolean;   // default: false — passed to LoginDialog when adding account
+  onSignMessage: (username: string) => string;
 }
 ```
 
@@ -335,11 +360,13 @@ Result from Hive blockchain authentication.
 
 ```tsx
 interface HiveAuthResult {
-  provider: string;      // Authentication provider (e.g., 'keychain')
-  challenge: string;     // Hash from Hive authentication
-  publicKey: string;     // User's public key
-  username: string;      // Hive username
-  proof: string;         // Timestamp used for authentication
+  provider: string;           // 'keychain' | 'hiveauth' | 'privatePostingKey'
+  challenge: string;          // Hash from Hive authentication
+  publicKey: string;          // User's public key
+  username: string;           // Hive username
+  proof: string;              // Timestamp used for authentication
+  privatePostingKey?: string; // Present for private key login
+  privateActiveKey?: string;  // Optional; present when user entered active key (only if isActiveFieldVisible was true). Validated against account active authority.
 }
 ```
 
@@ -354,7 +381,9 @@ interface LoggedInUser {
   challenge: string;
   publicKey: string;
   proof: string;
-  serverResponse: string; // JSON string from your server
+  serverResponse: string;     // JSON string from your server
+  privatePostingKey?: string; // Present for private key login
+  privateActiveKey?: string;  // Optional active key when provided at login
 }
 ```
 
@@ -368,6 +397,10 @@ interface ServerAuthResponse {
   type: string;
 }
 ```
+
+## Private key login and optional Active Key
+
+When users choose **Private Key** login they must enter a **Posting Key** (validated against the account’s posting authority). You can optionally show an **Active Key** field by passing `isActiveFieldVisible={true}` to `AuthButton`. If the user enters an active key, it is validated against the account’s active authority and included in `hiveResult.privateActiveKey` and in the stored `LoggedInUser`. The active key is always optional and is not required for login.
 
 ## Advanced Usage
 

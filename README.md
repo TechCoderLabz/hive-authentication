@@ -88,14 +88,15 @@ function App() {
           <AuthButton 
             onAuthenticate={handleAuthenticate}
             aioha={aioha}
-            shouldShowSwitchUser = {true} // Optional true
+            shouldShowSwitchUser={true}
+            isActiveFieldVisible={false}
             onClose={() => {
               console.log("AuthButton dialog closed");
             }}
             onSignMessage={(username) => {
               return `${new Date().toISOString()}:${username}`;
             }}
-            theme={"light"} // Optional light
+            theme={"light"}
           />
           
           {currentUser && (
@@ -135,6 +136,9 @@ function YouComponent() {
 ```
 
 ---
+
+**Private key login (optional Active Key)**  
+When users choose "Private Key" login, they enter a **Posting Key** (required). You can optionally show an **Active Key** field by passing `isActiveFieldVisible={true}` to `AuthButton`. If provided, the active key is validated against the account’s active authority and included in `hiveResult.privateActiveKey` and in the stored user. It is never required for login.
 
 **Note**: Both configurations are required even if you only plan to use one provider. This ensures the Aioha library is properly initialized with all necessary settings.
 
@@ -339,17 +343,23 @@ The main authentication button.
 **Props:**
 ```tsx
 interface AuthButtonProps {
-  onAuthenticate?: (hiveResult: HiveAuthResult) => Promise<string>;
+  onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
+  aioha: Aioha;
+  shouldShowSwitchUser?: boolean;   // default: true
+  isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key field in private key login
+  onClose?: () => void;
+  onSignMessage: (username: string) => string;
 }
 ```
 
 **Usage:**
 ```tsx
 <AuthButton 
-onAuthenticate={handleAuthenticate} 
-onSignMessage={() => {
-  return new Date().toISOString();
-}}
+  onAuthenticate={handleAuthenticate}
+  aioha={aioha}
+  shouldShowSwitchUser={true}
+  isActiveFieldVisible={false}
+  onSignMessage={(username) => `${new Date().toISOString()}:${username}`}
 />
 ```
 
@@ -369,15 +379,24 @@ const { currentUser, loggedInUsers, isLoading, error } = useAuthStore();
 
 ```tsx
 interface HiveAuthResult {
-  provider: string;      // 'keychain'
-  challenge: string;     // Hive signature
-  publicKey: string;     // User's public key
-  username: string;      // Hive username
-  proof: string;         // Timestamp
+  provider: string;           // 'keychain' | 'hiveauth' | 'privatePostingKey'
+  challenge: string;          // Hive signature
+  publicKey: string;          // User's public key
+  username: string;           // Hive username
+  proof: string;              // Timestamp
+  privatePostingKey?: string; // Present for private key login
+  privateActiveKey?: string;  // Optional; present when user entered active key (private key login, only if isActiveFieldVisible was true)
 }
 
-interface LoggedInUser extends HiveAuthResult {
-  serverResponse: string; // Your server response
+interface LoggedInUser {
+  username: string;
+  provider: string;
+  challenge: string;
+  publicKey: string;
+  proof: string;
+  serverResponse: string;      // Your server response
+  privatePostingKey?: string;
+  privateActiveKey?: string;  // Optional active key when provided at login
 }
 ```
 

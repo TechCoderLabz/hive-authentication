@@ -10,6 +10,7 @@ export const AuthButton: React.FC<
   onAuthenticate,
   aioha,
   shouldShowSwitchUser = true,
+  isActiveFieldVisible = false,
   onClose,
   onSignMessage,
   theme = "light", // Default to "light" theme
@@ -90,12 +91,14 @@ export const AuthButton: React.FC<
         onAuthenticate={onAuthenticate}
         aioha={aioha}
         onSignMessage={onSignMessage}
-        theme={theme} // Pass theme to LoginDialog
+        theme={theme}
+        isActiveFieldVisible={isActiveFieldVisible}
       />
 
       <SwitchUserModal
         isOpen={isSwitchUserModalOpen}
         shouldShowSwitchUser={shouldShowSwitchUser ?? true}
+        isActiveFieldVisible={isActiveFieldVisible}
         onClose={() => {
           setIsSwitchUserModalOpen(false);
           onClose?.();
@@ -103,7 +106,7 @@ export const AuthButton: React.FC<
         onAuthenticate={onAuthenticate}
         aioha={aioha}
         onSignMessage={onSignMessage}
-        theme={theme} // Pass theme to SwitchUserModal
+        theme={theme}
       />
     </>
   );

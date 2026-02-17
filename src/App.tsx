@@ -143,6 +143,7 @@ function App() {
                   onClose={() => {
                     // console.log("AuthButton dialog closed");
                   }}
+                  isActiveFieldVisible={true}
                   onSignMessage={(username) => {
                     return `${new Date().toISOString()}:${username}`;
                   }}

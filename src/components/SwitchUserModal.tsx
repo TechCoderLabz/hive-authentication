@@ -15,6 +15,7 @@ export const SwitchUserModal: React.FC<
   onAuthenticate,
   aioha,
   shouldShowSwitchUser = true,
+  isActiveFieldVisible = false,
   onSignMessage,
   theme = "light",
 }) => {
@@ -98,7 +99,8 @@ export const SwitchUserModal: React.FC<
         onAuthenticate={onAuthenticate}
         aioha={aioha}
         onSignMessage={onSignMessage}
-        theme={theme} // Pass theme to LoginDialog
+        theme={theme}
+        isActiveFieldVisible={isActiveFieldVisible}
       />
     );
   }
