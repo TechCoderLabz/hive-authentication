@@ -42,6 +42,8 @@ export interface AuthStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setHiveAuthPayload: (payload: string | null) => void;
+  /** Re-read encrypted state from localStorage (call after setting encryption key, e.g. on AuthButton mount). */
+  rehydrateFromStorage: () => void;
 
   // Authentication
   authenticateWithCallback: (
@@ -73,6 +75,8 @@ export interface LoginDialogProps {
 }
 
 export interface AuthButtonProps {
+  /** Encryption key for local storage (e.g. from your env/config). Replaces VITE_LOCAL_KEY. */
+  encryptionKey: string;
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;

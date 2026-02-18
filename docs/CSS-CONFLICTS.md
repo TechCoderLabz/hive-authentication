@@ -35,7 +35,7 @@ import { AuthButton } from 'hive-authentication';
 function App() {
   return (
     <div>
-      <AuthButton /> {/* Uses pre-built CSS */}
+      <AuthButton encryptionKey="your-encryption-key" {...requiredAuthButtonProps} /> {/* Uses pre-built CSS */}
     </div>
   );
 }
@@ -110,7 +110,7 @@ const StyledAuthButton = styled(AuthButton)`
 function App() {
   return (
     <div>
-      <StyledAuthButton />
+      <StyledAuthButton encryptionKey="your-encryption-key" {...requiredAuthButtonProps} />
     </div>
   );
 }

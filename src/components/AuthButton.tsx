@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
+import { setEncryptionKey } from "../constants/encryptionKey";
 import { LoginDialog } from "./LoginDialog";
 import { SwitchUserModal } from "./SwitchUserModal";
 import type { AuthButtonProps } from "../types/auth";
@@ -7,6 +8,7 @@ import type { AuthButtonProps } from "../types/auth";
 export const AuthButton: React.FC<
   AuthButtonProps & { theme?: "light" | "dark" }
 > = ({
+  encryptionKey,
   onAuthenticate,
   aioha,
   shouldShowSwitchUser = true,
@@ -15,8 +17,11 @@ export const AuthButton: React.FC<
   onSignMessage,
   theme = "light", // Default to "light" theme
 }) => {
-  // const { aioha } = useAioha();
-  const { setHiveAuthPayload } = useAuthStore();
+  setEncryptionKey(encryptionKey);
+  const { setHiveAuthPayload, rehydrateFromStorage } = useAuthStore();
+  React.useEffect(() => {
+    rehydrateFromStorage();
+  }, [rehydrateFromStorage]);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isSwitchUserModalOpen, setIsSwitchUserModalOpen] = useState(false);
   const { currentUser } = useAuthStore();

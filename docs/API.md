@@ -33,6 +33,7 @@ The main authentication button component.
 **Props**:
 ```tsx
 interface AuthButtonProps {
+  encryptionKey: string;   // Required: encryption key for local storage (e.g. from your env/config). Use this instead of VITE_LOCAL_KEY.
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;   // default: true
@@ -57,6 +58,7 @@ function App() {
     <div>
       <h1>My App</h1>
       <AuthButton
+        encryptionKey={import.meta.env.VITE_APP_ENCRYPTION_KEY || 'your-secure-encryption-key'}
         onAuthenticate={handleAuthenticate}
         aioha={aioha}
         shouldShowSwitchUser={true}
@@ -447,18 +449,12 @@ function MyApp() {
   };
 
   return <AuthButton
+    encryptionKey="your-secure-encryption-key"
     onSignMessage={() => {
       return new Date().toISOString();
     }}
   />;
 }
-```
-
-### Environment Variables
-
-```bash
-# Required: Encryption key for local storage
-VITE_LOCAL_KEY=your-secure-encryption-key
 ```
 
 ## Error Handling
@@ -474,7 +470,7 @@ The package provides comprehensive error handling:
 
 1. **Always handle errors**: Wrap authentication calls in try-catch blocks
 2. **Clean up listeners**: Unsubscribe from event listeners on component unmount
-3. **Secure encryption key**: Use a strong `VITE_LOCAL_KEY` in production
+3. **Secure encryption key**: Pass a strong `encryptionKey` (e.g. from your env/config) to `AuthButton` in production
 4. **Validate server responses**: Ensure your callback returns valid JSON strings
 5. **Handle loading states**: Use the `isLoading` state from the store
 6. **Test with multiple users**: Verify the multi-user functionality works correctly

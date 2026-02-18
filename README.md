@@ -10,20 +10,13 @@ npm install hive-authentication
 
 ## Quick Start
 
-### 1. Environment Variables
-
-```bash
-# Required: Encryption key for local storage
-VITE_LOCAL_KEY=your-secure-encryption-key
-```
-
-### 2. Import CSS
+### 1. Import CSS
 
 ```tsx
 import 'hive-authentication/build.css';
 ```
 
-### 3. Use the Auth Button with Callback
+### 2. Use the Auth Button with Callback
 
 ```tsx
 import { AuthButton, useAuthStore } from 'hive-authentication';
@@ -85,7 +78,8 @@ function App() {
     <AiohaProvider aioha={aioha}>
       <div>
         <h1>My App</h1>
-          <AuthButton 
+          <AuthButton
+            encryptionKey={import.meta.env.VITE_APP_ENCRYPTION_KEY || 'your-secure-encryption-key'}
             onAuthenticate={handleAuthenticate}
             aioha={aioha}
             shouldShowSwitchUser={true}
@@ -343,6 +337,7 @@ The main authentication button.
 **Props:**
 ```tsx
 interface AuthButtonProps {
+  encryptionKey: string;   // Required: encryption key for local storage (e.g. from your env/config)
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;   // default: true
@@ -354,7 +349,8 @@ interface AuthButtonProps {
 
 **Usage:**
 ```tsx
-<AuthButton 
+<AuthButton
+  encryptionKey={import.meta.env.VITE_APP_ENCRYPTION_KEY || 'your-secure-encryption-key'}
   onAuthenticate={handleAuthenticate}
   aioha={aioha}
   shouldShowSwitchUser={true}

@@ -2,16 +2,21 @@ import { create } from 'zustand';
 import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
 import { STORAGE_KEYS } from '../constants/storage';
+import { getEncryptionKey } from '../constants/encryptionKey';
 
-// Encryption/Decryption helpers
+// Encryption/Decryption helpers (use encryptionKey passed to AuthButton)
 const encryptData = (data: unknown): string => {
-  const key = import.meta.env.VITE_LOCAL_KEY || 'default-key';
+  const key = getEncryptionKey();
+  if (!key) {
+    throw new Error('Encryption key not set. Pass encryptionKey to AuthButton.');
+  }
   return CryptoJS.AES.encrypt(JSON.stringify(data), key).toString();
 };
 
 const decryptData = (encryptedData: string): unknown => {
   try {
-    const key = import.meta.env.VITE_LOCAL_KEY || 'default-key';
+    const key = getEncryptionKey();
+    if (!key) return null;
     const bytes = CryptoJS.AES.decrypt(encryptedData, key);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     return JSON.parse(decrypted);
@@ -70,6 +75,11 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     setLoading: (loading) => set({ isLoading: loading }),
     
     setError: (error) => set({ error }),
+
+    rehydrateFromStorage: () => {
+      const restored = initializeState();
+      set({ currentUser: restored.currentUser, loggedInUsers: restored.loggedInUsers });
+    },
     
     setCurrentUser: (user) => {
       // Encrypt and store
