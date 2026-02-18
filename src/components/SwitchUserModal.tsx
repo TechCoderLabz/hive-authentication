@@ -117,9 +117,9 @@ export const SwitchUserModal: React.FC<
         }`}
       >
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           {/* Title */}
-          <h3 className="font-bold text-lg mb-4 text-center">
+          <h3 className="font-bold text-lg text-center">
             {shouldShowSwitchUser ? "Switch User" : "Logged in User"}
           </h3>
           {/* Cross Button */}
