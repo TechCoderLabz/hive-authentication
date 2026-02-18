@@ -91,11 +91,11 @@ function App() {
 
   const handleProgrammaticLogin = async () => {
     const userInfo = await loginWithPrivateKey(user, key, async (hiveResult) => {
-        // console.log("Hive result:", hiveResult);
+        console.log("Hive result:", hiveResult);
         // TODO: Add server validation
         return JSON.stringify({ message: "Server validation successful" });
     });
-    // console.log("User logged in:", userInfo);
+    console.log("User logged in:", userInfo);
   };
 
   const handleProgrammaticLogout = async () => {
