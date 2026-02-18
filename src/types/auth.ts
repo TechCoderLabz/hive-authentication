@@ -33,6 +33,7 @@ export interface AuthStore {
   isLoading: boolean;
   error: string | null;
   hiveAuthPayload: string | null;
+  secretKey: string | null;
   
   // Actions (package internal use only)
   setCurrentUser: (user: LoggedInUser | null) => void;
@@ -42,9 +43,7 @@ export interface AuthStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setHiveAuthPayload: (payload: string | null) => void;
-  /** Re-read encrypted state from localStorage (call after setting encryption key, e.g. on AuthButton mount). */
-  rehydrateFromStorage: () => void;
-
+  setSecretKey: (secretKey: string | null) => void;
   // Authentication
   authenticateWithCallback: (
     hiveResult: HiveAuthResult,

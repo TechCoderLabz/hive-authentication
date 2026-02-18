@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
-import { setEncryptionKey } from "../constants/encryptionKey";
 import { LoginDialog } from "./LoginDialog";
 import { SwitchUserModal } from "./SwitchUserModal";
 import type { AuthButtonProps } from "../types/auth";
@@ -17,14 +16,14 @@ export const AuthButton: React.FC<
   onSignMessage,
   theme = "light", // Default to "light" theme
 }) => {
-  setEncryptionKey(encryptionKey);
-  const { setHiveAuthPayload, rehydrateFromStorage } = useAuthStore();
-  React.useEffect(() => {
-    rehydrateFromStorage();
-  }, [rehydrateFromStorage]);
+  const { setHiveAuthPayload, setSecretKey } = useAuthStore();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isSwitchUserModalOpen, setIsSwitchUserModalOpen] = useState(false);
   const { currentUser } = useAuthStore();
+
+  useEffect(() => {
+    setSecretKey(encryptionKey);
+  }, [encryptionKey]);
 
   useEffect(() => {
     aioha.on("hiveauth_login_request", (payload: string) => {

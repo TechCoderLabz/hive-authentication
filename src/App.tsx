@@ -138,7 +138,7 @@ function App() {
               </p>
               <div className="card-actions justify-center mt-4">
                 <AuthButton
-                  encryptionKey={import.meta.env.VITE_LOCAL_KEY ?? 'demo-encryption-key'}
+                  encryptionKey={import.meta.env.VITE_LOCAL_KEY ?? 'test-encryption-key'}
                   onAuthenticate={handleAuthenticate}
                   aioha={aioha}
                   onClose={() => {

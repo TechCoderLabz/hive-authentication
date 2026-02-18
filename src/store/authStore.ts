@@ -2,21 +2,16 @@ import { create } from 'zustand';
 import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
 import { STORAGE_KEYS } from '../constants/storage';
-import { getEncryptionKey } from '../constants/encryptionKey';
 
 // Encryption/Decryption helpers (use encryptionKey passed to AuthButton)
-const encryptData = (data: unknown): string => {
-  const key = getEncryptionKey();
-  if (!key) {
-    throw new Error('Encryption key not set. Pass encryptionKey to AuthButton.');
-  }
+const encryptData = (data: unknown, key: string): string => {
+  if (!data || !key || key === '') return '';
   return CryptoJS.AES.encrypt(JSON.stringify(data), key).toString();
 };
 
-const decryptData = (encryptedData: string): unknown => {
+const decryptData = (encryptedData: string, key: string): unknown => {
+  if (!encryptedData || !key || key === '') return null;
   try {
-    const key = getEncryptionKey();
-    if (!key) return null;
     const bytes = CryptoJS.AES.decrypt(encryptedData, key);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     return JSON.parse(decrypted);
@@ -35,15 +30,15 @@ const cleanupOldStorage = () => {
 };
 
 // Initialize state from localStorage
-const initializeState = (): { currentUser: LoggedInUser | null; loggedInUsers: LoggedInUser[] } => {
-  if (typeof window === 'undefined') return { currentUser: null, loggedInUsers: [] };
+const initializeState = (secretKey: string): { currentUser: LoggedInUser | null; loggedInUsers: LoggedInUser[] } => {
+  if (typeof window === 'undefined' || !secretKey || secretKey === '') return { currentUser: null, loggedInUsers: [] };
   
   try {
     const encryptedUsers = localStorage.getItem(STORAGE_KEYS.LOGGED_IN_USERS);
     const encryptedCurrentUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     
-    const users = encryptedUsers ? decryptData(encryptedUsers) : [];
-    const currentUser = encryptedCurrentUser ? decryptData(encryptedCurrentUser) : null;
+    const users = encryptedUsers ? decryptData(encryptedUsers, secretKey) : [];
+    const currentUser = encryptedCurrentUser ? decryptData(encryptedCurrentUser, secretKey) : null;
     
     // Type guard to ensure we have the correct types
     const typedUsers = Array.isArray(users) ? users.filter((user): user is LoggedInUser => 
@@ -63,7 +58,7 @@ const initializeState = (): { currentUser: LoggedInUser | null; loggedInUsers: L
 
 export const useAuthStore = create<AuthStore>((set, get) => {
   // Initialize state
-  const initialState = initializeState();
+  const initialState = initializeState('');
   cleanupOldStorage();
   
   return {
@@ -71,20 +66,20 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     isLoading: false,
     error: null,
     hiveAuthPayload: null,
+    secretKey: null,
     setHiveAuthPayload: (payload) => set({ hiveAuthPayload: payload }),
     setLoading: (loading) => set({ isLoading: loading }),
-    
-    setError: (error) => set({ error }),
-
-    rehydrateFromStorage: () => {
-      const restored = initializeState();
+    setSecretKey: (secretKey) => { 
+      set({ secretKey });
+      const restored = initializeState(secretKey || '');
       set({ currentUser: restored.currentUser, loggedInUsers: restored.loggedInUsers });
     },
+    setError: (error) => set({ error }),
     
     setCurrentUser: (user) => {
       // Encrypt and store
       if (user) {
-        const encryptedUser = encryptData(user);
+        const encryptedUser = encryptData(user, get().secretKey || '');
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER, encryptedUser);
       } else {
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
@@ -98,7 +93,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const updatedUsers = [...loggedInUsers.filter(u => u.username !== user.username), user];
       
       // Encrypt and store
-      const encryptedUsers = encryptData(updatedUsers);
+      const encryptedUsers = encryptData(updatedUsers, get().secretKey || '');
       localStorage.setItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
       
       set({ loggedInUsers: updatedUsers });
@@ -109,7 +104,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const updatedUsers = loggedInUsers.filter(u => u.username !== username);
       
       // Encrypt and store
-      const encryptedUsers = encryptData(updatedUsers);
+      const encryptedUsers = encryptData(updatedUsers, get().secretKey || '');
       localStorage.setItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
       
       // If removing current user, clear current user

@@ -4,9 +4,9 @@
  */
 export const STORAGE_KEYS = {
   /** Key for storing the currently logged-in user */
-  CURRENT_USER: 'logged-in-user',
+  CURRENT_USER: 'ha-logged-in-user',
   /** Key for storing all logged-in users */
-  LOGGED_IN_USERS: 'logged-in-users',
+  LOGGED_IN_USERS: 'ha-logged-in-users',
   /** Legacy key for auth storage (used in cleanup) */
   LEGACY_AUTH_STORAGE: 'auth-storage',
   /** Legacy key for encrypted hive auth (used in cleanup) */
