@@ -33,6 +33,7 @@ export interface AuthStore {
   isLoading: boolean;
   error: string | null;
   hiveAuthPayload: string | null;
+  secretKey: string | null;
   
   // Actions (package internal use only)
   setCurrentUser: (user: LoggedInUser | null) => void;
@@ -42,7 +43,7 @@ export interface AuthStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setHiveAuthPayload: (payload: string | null) => void;
-
+  setSecretKey: (secretKey: string | null) => void;
   // Authentication
   authenticateWithCallback: (
     hiveResult: HiveAuthResult,
@@ -73,6 +74,8 @@ export interface LoginDialogProps {
 }
 
 export interface AuthButtonProps {
+  /** Encryption key for local storage (e.g. from your env/config). Replaces VITE_LOCAL_KEY. */
+  encryptionKey: string;
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
   shouldShowSwitchUser?: boolean;

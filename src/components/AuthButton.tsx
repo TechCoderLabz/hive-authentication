@@ -7,6 +7,7 @@ import type { AuthButtonProps } from "../types/auth";
 export const AuthButton: React.FC<
   AuthButtonProps & { theme?: "light" | "dark" }
 > = ({
+  encryptionKey,
   onAuthenticate,
   aioha,
   shouldShowSwitchUser = true,
@@ -15,11 +16,14 @@ export const AuthButton: React.FC<
   onSignMessage,
   theme = "light", // Default to "light" theme
 }) => {
-  // const { aioha } = useAioha();
-  const { setHiveAuthPayload } = useAuthStore();
+  const { setHiveAuthPayload, setSecretKey } = useAuthStore();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isSwitchUserModalOpen, setIsSwitchUserModalOpen] = useState(false);
   const { currentUser } = useAuthStore();
+
+  useEffect(() => {
+    setSecretKey(encryptionKey);
+  }, [encryptionKey]);
 
   useEffect(() => {
     aioha.on("hiveauth_login_request", (payload: string) => {
