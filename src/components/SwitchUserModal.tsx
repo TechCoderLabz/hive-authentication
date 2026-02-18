@@ -116,21 +116,24 @@ export const SwitchUserModal: React.FC<
           theme === "dark" ? "bg-gray-900" : "bg-white"
         }`}
       >
-        {/* Cross Button */}
-        <button
-          className={`btn btn-sm btn-circle btn-ghost ${
-            theme === "dark"
-              ? "bg-gray-700 hover:bg-gray-600"
-              : "bg-gray-100 hover:bg-gray-200 border border-gray-300 text-black"
-          }`}
-          onClick={onClose}
-        >
-          ✕
-        </button>
 
-        <h3 className="font-bold text-lg mb-4">
-          {shouldShowSwitchUser ? "Switch User" : "Logged in User"}
-        </h3>
+        <div className="flex items-center justify-between">
+          {/* Title */}
+          <h3 className="font-bold text-lg mb-4 text-center">
+            {shouldShowSwitchUser ? "Switch User" : "Logged in User"}
+          </h3>
+          {/* Cross Button */}
+          <button
+            className={`btn btn-sm btn-circle btn-ghost ${
+              theme === "dark"
+                ? "bg-gray-700 hover:bg-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 border border-gray-300 text-black"
+            }`}
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
 
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {loggedInUsers.map((user) => (
