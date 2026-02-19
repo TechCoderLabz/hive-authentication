@@ -2,18 +2,19 @@ import { useEffect, useState } from "react";
 import { AuthButton } from "./components/AuthButton";
 import { useAuthStore } from "./store/authStore";
 import type { HiveAuthResult, LoggedInUser } from "./types/auth";
-import { initAioha } from '@aioha/aioha'
+import { initAioha, KeyTypes } from '@aioha/aioha'
 import { AiohaProvider } from '@aioha/react-provider'
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
+import type { Operation } from "@hiveio/dhive";
 
 const aioha = initAioha(
   {
-  hivesigner: {
+    hivesigner: {
       app: 'hive-auth-demo.app',
       callbackURL: window.location.origin + '/hivesigner.html',
       scope: ['login', 'vote']
-  },
-  hiveauth: {
+    },
+    hiveauth: {
       name: 'Hive Authentication Demo',
       description: 'A demo app for testing Hive authentication'
     }
@@ -22,7 +23,7 @@ const aioha = initAioha(
 
 
 function App() {
-  const { currentUser, loggedInUsers } = useAuthStore();
+  const { currentUser, loggedInUsers, switchToActiveForCurrentUser, switchToPostingForCurrentUser } = useAuthStore();
   const { loginWithPrivateKey, logout } = useProgrammaticAuth(aioha);
   const [theme, setTheme] = useState<"light" | "dark">("light"); // Add theme state
   const user = "user-name-goes-here";
@@ -91,9 +92,9 @@ function App() {
 
   const handleProgrammaticLogin = async () => {
     const userInfo = await loginWithPrivateKey(user, key, async (hiveResult) => {
-        console.log("Hive result:", hiveResult);
-        // TODO: Add server validation
-        return JSON.stringify({ message: "Server validation successful" });
+      console.log("Hive result:", hiveResult);
+      // TODO: Add server validation
+      return JSON.stringify({ message: "Server validation successful" });
     });
     console.log("User logged in:", userInfo);
   };
@@ -107,12 +108,23 @@ function App() {
     }
   };
 
+  const handlePayButtonClick = async () => {
+    try {
+      const parsedHiveOp: Operation = ["transfer", { "from": "shaktimaaan", "to": "i-am-the-flash", "amount": "0.001 HBD", "memo": "trying from hive authentication" }];
+      await switchToActiveForCurrentUser();
+      const result = await aioha.signAndBroadcastTx([parsedHiveOp], KeyTypes.Active);
+      console.log("Result:", JSON.stringify(result, null, 2));
+      await switchToPostingForCurrentUser();
+    } catch (error) {
+      console.error("Pay button click failed:", error);
+    }
+  };
+
   return (
     <AiohaProvider aioha={aioha}>
       <div
-        className={`min-h-screen ${
-          theme === "dark" ? "bg-gray-800 text-white" : "bg-base-200 text-black"
-        } p-8`}
+        className={`min-h-screen ${theme === "dark" ? "bg-gray-800 text-white" : "bg-base-200 text-black"
+          } p-8`}
       >
         <div className="max-w-4xl mx-auto">
           {/* Theme Toggle */}
@@ -127,9 +139,8 @@ function App() {
 
           {/* Auth Section */}
           <div
-            className={`card ${
-              theme === "dark" ? "bg-gray-900" : "bg-base-100"
-            } shadow-xl mb-8`}
+            className={`card ${theme === "dark" ? "bg-gray-900" : "bg-base-100"
+              } shadow-xl mb-8`}
           >
             <div className="card-body">
               <h2 className="card-title text-2xl">Hive Authentication Demo</h2>
@@ -202,6 +213,12 @@ function App() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Pay Button */}
+          {loggedInUsers.length > 0 && (<div className="card-actions justify-center mt-4">
+            <button onClick={handlePayButtonClick} className="btn btn-primary">Pay 0.001 HBD</button>
+          </div>
           )}
 
         </div>

@@ -16,13 +16,14 @@ export const AuthButton: React.FC<
   onSignMessage,
   theme = "light", // Default to "light" theme
 }) => {
-  const { setHiveAuthPayload, setSecretKey } = useAuthStore();
+  const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isSwitchUserModalOpen, setIsSwitchUserModalOpen] = useState(false);
   const { currentUser } = useAuthStore();
 
   useEffect(() => {
     setSecretKey(encryptionKey);
+    setAioha(aioha);
   }, [encryptionKey]);
 
   useEffect(() => {
