@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
 import { STORAGE_KEYS } from '../constants/storage';
+import { PlaintextKeyProvider } from '@aioha/aioha/build/providers/custom/plaintext';
 
 // Encryption/Decryption helpers (use encryptionKey passed to AuthButton)
 const encryptData = (data: unknown, key: string): string => {
@@ -67,12 +68,22 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     error: null,
     hiveAuthPayload: null,
     secretKey: null,
+    aioha: null,
     setHiveAuthPayload: (payload) => set({ hiveAuthPayload: payload }),
     setLoading: (loading) => set({ isLoading: loading }),
     setSecretKey: (secretKey) => { 
       set({ secretKey });
       const restored = initializeState(secretKey || '');
       set({ currentUser: restored.currentUser, loggedInUsers: restored.loggedInUsers });
+    },
+    setAioha: (aioha) => set({ aioha }),
+    switchToActiveForCurrentUser: () => {
+      const plaintextProvider = new PlaintextKeyProvider(get().currentUser?.privateActiveKey || '');
+      get().aioha?.registerCustomProvider(plaintextProvider);
+    },
+    switchToPostingForCurrentUser: () => {
+      const plaintextProvider = new PlaintextKeyProvider(get().currentUser?.privatePostingKey || '');
+      get().aioha?.registerCustomProvider(plaintextProvider);
     },
     setError: (error) => set({ error }),
     
@@ -117,7 +128,6 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
     
     clearAllUsers: async () => {
-
       localStorage.removeItem(STORAGE_KEYS.LOGGED_IN_USERS);
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       set({ currentUser: null, loggedInUsers: [] });

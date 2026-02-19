@@ -34,7 +34,7 @@ export interface AuthStore {
   error: string | null;
   hiveAuthPayload: string | null;
   secretKey: string | null;
-  
+  aioha: Aioha | null;
   // Actions (package internal use only)
   setCurrentUser: (user: LoggedInUser | null) => void;
   addLoggedInUser: (user: LoggedInUser) => void;
@@ -44,11 +44,14 @@ export interface AuthStore {
   setError: (error: string | null) => void;
   setHiveAuthPayload: (payload: string | null) => void;
   setSecretKey: (secretKey: string | null) => void;
+  setAioha: (aioha: Aioha | null) => void;
   // Authentication
   authenticateWithCallback: (
     hiveResult: HiveAuthResult,
     callback: (hiveResult: HiveAuthResult) => Promise<string>
   ) => Promise<void>;
+  switchToActiveForCurrentUser: () => void;
+  switchToPostingForCurrentUser: () => void;
 }
 
 export interface SwitchUserModalProps {
