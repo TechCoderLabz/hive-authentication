@@ -3,6 +3,7 @@ import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
 import { STORAGE_KEYS } from '../constants/storage';
 import { PlaintextKeyProvider } from '@aioha/aioha/build/providers/custom/plaintext';
+import { KeyTypes, Providers } from '@aioha/aioha/build/types';
 
 // Encryption/Decryption helpers (use encryptionKey passed to AuthButton)
 const encryptData = (data: unknown, key: string): string => {
@@ -77,13 +78,31 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       set({ currentUser: restored.currentUser, loggedInUsers: restored.loggedInUsers });
     },
     setAioha: (aioha) => set({ aioha }),
-    switchToActiveForCurrentUser: () => {
-      const plaintextProvider = new PlaintextKeyProvider(get().currentUser?.privateActiveKey || '');
-      get().aioha?.registerCustomProvider(plaintextProvider);
+    switchToActiveForCurrentUser: async () => {
+      const { currentUser, aioha } = get();
+      if (!currentUser?.username) return;
+      if (!aioha) return;
+      if (!currentUser.privateActiveKey) return;
+      const plaintextProvider = new PlaintextKeyProvider(currentUser.privateActiveKey);
+      aioha.registerCustomProvider(plaintextProvider);
+      const timestamp = new Date().toISOString();
+      await aioha.login(Providers.Custom, currentUser.username, {
+        msg: timestamp,
+        keyType: KeyTypes.Active
+      });
     },
-    switchToPostingForCurrentUser: () => {
-      const plaintextProvider = new PlaintextKeyProvider(get().currentUser?.privatePostingKey || '');
-      get().aioha?.registerCustomProvider(plaintextProvider);
+    switchToPostingForCurrentUser: async () => {
+      const { currentUser, aioha } = get();
+      if (!currentUser?.username) return;
+      if (!aioha) return;
+      if (!currentUser.privatePostingKey) return;
+      const plaintextProvider = new PlaintextKeyProvider(currentUser.privatePostingKey);
+      aioha.registerCustomProvider(plaintextProvider);
+      const timestamp = new Date().toISOString();
+      await aioha.login(Providers.Custom, currentUser.username, {
+        msg: timestamp,
+        keyType: KeyTypes.Posting
+      });
     },
     setError: (error) => set({ error }),
     

@@ -50,8 +50,8 @@ export interface AuthStore {
     hiveResult: HiveAuthResult,
     callback: (hiveResult: HiveAuthResult) => Promise<string>
   ) => Promise<void>;
-  switchToActiveForCurrentUser: () => void;
-  switchToPostingForCurrentUser: () => void;
+  switchToActiveForCurrentUser: () => Promise<void>;
+  switchToPostingForCurrentUser: () => Promise<void>;
 }
 
 export interface SwitchUserModalProps {
