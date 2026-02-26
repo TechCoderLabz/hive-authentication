@@ -9,6 +9,7 @@ export { BottomToolbarWithSlider } from './components/BottomToolbarWithSlider';
 // Store and hooks
 export { useAuthStore } from './store/authStore';
 export { useProgrammaticAuth } from './hooks/useProgrammaticAuth';
+export { ReportModal } from './components/ReportModal';
 
 // Services
 export { AuthService } from './services/authService';

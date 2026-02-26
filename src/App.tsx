@@ -6,6 +6,7 @@ import { initAioha, KeyTypes } from '@aioha/aioha'
 import { AiohaProvider } from '@aioha/react-provider'
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
 import type { Operation } from "@hiveio/dhive";
+import { ReportModal } from "./components/ReportModal";
 
 const aioha = initAioha(
   {
@@ -26,8 +27,16 @@ function App() {
   const { currentUser, loggedInUsers, switchToActiveForCurrentUser, switchToPostingForCurrentUser } = useAuthStore();
   const { loginWithPrivateKey, logout } = useProgrammaticAuth(aioha);
   const [theme, setTheme] = useState<"light" | "dark">("light"); // Add theme state
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const user = "user-name-goes-here";
   const key = "your-private-posting-key";
+
+  const handleReport = async (reason: string) => {
+    // Implement report logic here
+    console.log(`Reporting with reason: ${reason}`);
+    // For now, just close the modal
+    setIsReportModalOpen(false);
+  };
 
   useEffect(() => {
     let previousUser = currentUser;
@@ -216,12 +225,31 @@ function App() {
           )}
 
           {/* Pay Button */}
-          {loggedInUsers.length > 0 && (<div className="card-actions justify-center mt-4">
-            <button onClick={handlePayButtonClick} className="btn btn-primary">Pay 0.001 HBD</button>
-          </div>
+          {loggedInUsers.length > 0 && (
+            <div className="card-actions justify-center mt-4">
+              <button
+                onClick={handlePayButtonClick}
+                className="btn btn-primary"
+              >
+                Pay 0.001 HBD
+              </button>
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                className="btn btn-secondary"
+              >
+                Report
+              </button>
+            </div>
           )}
 
         </div>
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          onReport={handleReport}
+          reportType="post"
+          targetUsername="some-user"
+        />
       </div>
     </AiohaProvider>
   );
