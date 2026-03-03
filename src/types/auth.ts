@@ -62,6 +62,10 @@ export interface SwitchUserModalProps {
   shouldShowSwitchUser?: boolean;
   isActiveFieldVisible?: boolean;
   onSignMessage: (username: string) => string;
+  /** Optional colors for the Login/Add Account buttons. */
+  loginButtonColors?: string[];
+  /** Optional color for \"Login\" / \"Add Account\" text. */
+  loginButtonTextColor?: string;
 }
 
 export interface LoginDialogProps {
@@ -74,6 +78,10 @@ export interface LoginDialogProps {
   onSignMessage: (username: string) => string;
   /** When true, shows optional Active Key field in private key login. Default: false */
   isActiveFieldVisible?: boolean;
+  /** Optional colors for the Login button. */
+  loginButtonColors?: string[];
+  /** Optional color for the \"Login\" text. */
+  loginButtonTextColor?: string;
 }
 
 export interface AuthButtonProps {

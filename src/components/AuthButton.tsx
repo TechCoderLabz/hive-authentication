@@ -97,7 +97,9 @@ export const AuthButton: React.FC<
         <button
           className={`btn ${
             hasCustomLoginColors
-              ? "border-none focus:outline-none focus:ring-0"
+              ? `border-none focus:outline-none focus:ring-0 ${
+                  theme === "dark" ? "text-white" : "text-black"
+                }`
               : theme === "dark"
               ? "bg-primary text-white hover:bg-primary-focus border-none"
               : "btn-primary"
@@ -120,6 +122,8 @@ export const AuthButton: React.FC<
         onSignMessage={onSignMessage}
         theme={theme}
         isActiveFieldVisible={isActiveFieldVisible}
+        loginButtonColors={loginButtonColors}
+        loginButtonTextColor={loginButtonTextColor}
       />
 
       <SwitchUserModal
@@ -134,6 +138,8 @@ export const AuthButton: React.FC<
         aioha={aioha}
         onSignMessage={onSignMessage}
         theme={theme}
+        loginButtonColors={loginButtonColors}
+        loginButtonTextColor={loginButtonTextColor}
       />
     </>
   );

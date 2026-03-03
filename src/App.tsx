@@ -170,8 +170,8 @@ function App() {
                   }}
                   theme={theme} // Pass theme to AuthButton
                   // Example: custom login button color / gradient
-                  loginButtonColors={["#ec4899", "#3b82f6","#9245f3"]}
-                  loginButtonTextColor="yellow"
+                  loginButtonColors={["#e31337"]}
+                  loginButtonTextColor="white"
                 />
               </div>
               <div className="card-actions justify-center mt-4">

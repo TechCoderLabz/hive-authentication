@@ -20,6 +20,8 @@ export const LoginDialog: React.FC<
   onSignMessage,
   theme = "light",
   isActiveFieldVisible = false,
+  loginButtonColors,
+  loginButtonTextColor,
 }) => {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -202,6 +204,19 @@ export const LoginDialog: React.FC<
     }
   };
 
+  const hasCustomLoginColors =
+    loginButtonColors && loginButtonColors.length > 0;
+
+  const loginButtonStyle: React.CSSProperties | undefined =
+    hasCustomLoginColors
+      ? {
+          background:
+            loginButtonColors!.length === 1
+              ? loginButtonColors![0]
+              : `linear-gradient(90deg, ${loginButtonColors!.join(", ")})`,
+        }
+      : undefined;
+
   if (!isOpen) return null;
 
   return (
@@ -225,7 +240,10 @@ export const LoginDialog: React.FC<
             </button>
           )}
 
-          <h3 className="font-bold text-lg flex-1 text-center">
+          <h3
+            className="font-bold text-lg flex-1 text-center"
+            style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
+          >
             {showBackButton ? 'Add Account' : 'Login with Hive'}
           </h3>
 
@@ -371,7 +389,10 @@ export const LoginDialog: React.FC<
               </>
             )}
             <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-3 text-center">
+              <p
+                className="text-sm text-gray-600 mb-3 text-center"
+                style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
+              >
                 Choose your login method:
               </p>
 
@@ -381,11 +402,18 @@ export const LoginDialog: React.FC<
                   <label
                     className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
                       loginMethod === "keychain"
-                        ? "bg-primary text-primary-content"
+                        ? hasCustomLoginColors
+                          ? "border-none"
+                          : "bg-primary text-primary-content"
                         : theme === "dark"
                         ? "border border-base-300 hover:bg-gray-700 hover:text-white"
                         : "border border-gray-300 hover:bg-gray-200 hover:text-black"
                     }`}
+                    style={
+                      loginMethod === "keychain" && hasCustomLoginColors
+                        ? loginButtonStyle
+                        : undefined
+                    }
                   >
                     <input
                       type="radio"
@@ -405,11 +433,18 @@ export const LoginDialog: React.FC<
                   <label
                     className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
                       loginMethod === "hiveauth"
-                        ? "bg-primary text-primary-content"
+                        ? hasCustomLoginColors
+                          ? "border-none"
+                          : "bg-primary text-primary-content"
                         : theme === "dark"
                         ? "border border-base-300 hover:bg-gray-700 hover:text-white"
                         : "border border-gray-300 hover:bg-gray-200 hover:text-black"
                     }`}
+                    style={
+                      loginMethod === "hiveauth" && hasCustomLoginColors
+                        ? loginButtonStyle
+                        : undefined
+                    }
                   >
                     <input
                       type="radio"
@@ -429,11 +464,18 @@ export const LoginDialog: React.FC<
                   <label
                     className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
                       loginMethod === "privateKey"
-                        ? "bg-primary text-primary-content"
+                        ? hasCustomLoginColors
+                          ? "border-none"
+                          : "bg-primary text-primary-content"
                         : theme === "dark"
                         ? "border border-base-300 hover:bg-gray-700 hover:text-white"
                         : "border border-gray-300 hover:bg-gray-200 hover:text-black"
                     }`}
+                    style={
+                      loginMethod === "privateKey" && hasCustomLoginColors
+                        ? loginButtonStyle
+                        : undefined
+                    }
                   >
                     <input
                       type="radio"
@@ -455,10 +497,15 @@ export const LoginDialog: React.FC<
               {/* Login Button */}
               <button
                 className={`btn w-full mt-4 ${
-                  theme === "dark"
+                  hasCustomLoginColors
+                    ? `border-none focus:outline-none focus:ring-0 ${
+                        theme === "dark" ? "text-white" : "text-black"
+                      }`
+                    : theme === "dark"
                     ? "bg-primary text-white hover:bg-primary-focus border-none"
-                    : "bg-blue-500 text-white hover:bg-blue-600 border-none"
+                    : "bg-blue-500 text-black hover:bg-blue-600 border-none"
                 }`}
+                style={loginButtonStyle}
                 onClick={() => {
                   handleLogin(onSignMessage(username.trim().toLocaleLowerCase()));
                 }}
@@ -467,10 +514,26 @@ export const LoginDialog: React.FC<
                 {isLoading ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    Logging in...
+                    <span
+                      style={
+                        loginButtonTextColor
+                          ? { color: loginButtonTextColor }
+                          : undefined
+                      }
+                    >
+                      Logging in...
+                    </span>
                   </>
                 ) : (
-                  'Login'
+                  <span
+                    style={
+                      loginButtonTextColor
+                        ? { color: loginButtonTextColor }
+                        : undefined
+                    }
+                  >
+                    Login
+                  </span>
                 )}
               </button>
             </div>

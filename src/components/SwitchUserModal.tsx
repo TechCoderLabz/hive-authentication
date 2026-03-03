@@ -18,6 +18,8 @@ export const SwitchUserModal: React.FC<
   isActiveFieldVisible = false,
   onSignMessage,
   theme = "light",
+  loginButtonColors,
+  loginButtonTextColor,
 }) => {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const { currentUser, loggedInUsers, setCurrentUser, removeLoggedInUser, clearAllUsers } = useAuthStore();
@@ -88,6 +90,32 @@ export const SwitchUserModal: React.FC<
     }
   };
 
+  const hasCustomLoginColors =
+    loginButtonColors && loginButtonColors.length > 0;
+
+  const addAccountButtonStyle: React.CSSProperties | undefined =
+    hasCustomLoginColors || loginButtonTextColor
+      ? {
+          ...(hasCustomLoginColors && {
+            background:
+              loginButtonColors!.length === 1
+                ? loginButtonColors![0]
+                : `linear-gradient(90deg, ${loginButtonColors!.join(", ")})`,
+          }),
+          ...(loginButtonTextColor && { color: loginButtonTextColor }),
+        }
+      : undefined;
+
+  const currentBadgeStyle: React.CSSProperties | undefined =
+    hasCustomLoginColors || loginButtonTextColor
+      ? {
+          ...(hasCustomLoginColors && {
+            background: loginButtonColors![0],
+          }),
+          ...(loginButtonTextColor && { color: loginButtonTextColor }),
+        }
+      : undefined;
+
   if (!isOpen) return null;
   if (showAddAccount) {
     return (
@@ -101,6 +129,8 @@ export const SwitchUserModal: React.FC<
         onSignMessage={onSignMessage}
         theme={theme}
         isActiveFieldVisible={isActiveFieldVisible}
+        loginButtonColors={loginButtonColors}
+        loginButtonTextColor={loginButtonTextColor}
       />
     );
   }
@@ -185,7 +215,12 @@ export const SwitchUserModal: React.FC<
               {/* Status/Action */}
               <div className="flex items-center gap-2">
                 {currentUser?.username === user.username ? (
-                  <span className="badge badge-primary badge-sm">Current</span>
+                  <span
+                    className="badge badge-primary badge-sm"
+                    style={currentBadgeStyle}
+                  >
+                    Current
+                  </span>
                 ) : (
                   <button
                     className="btn btn-xs btn-outline btn-error"
@@ -207,11 +242,14 @@ export const SwitchUserModal: React.FC<
           {
             shouldShowSwitchUser &&
             <button
-              className={`btn ${
-                theme === "dark"
+              className={`btn w-full ${
+                hasCustomLoginColors
+                  ? "border-none focus:outline-none focus:ring-0"
+                  : theme === "dark"
                   ? "bg-primary text-white hover:bg-primary-focus"
                   : "bg-blue-500 text-white hover:bg-blue-600"
-              } w-full`}
+              }`}
+              style={addAccountButtonStyle}
               onClick={handleAddAccount}
             >
               Add Account
