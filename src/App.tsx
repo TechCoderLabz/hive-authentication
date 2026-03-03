@@ -169,6 +169,9 @@ function App() {
                     return `${new Date().toISOString()}:${username}`;
                   }}
                   theme={theme} // Pass theme to AuthButton
+                  // Example: custom login button color / gradient
+                  loginButtonColors={["#ec4899", "#3b82f6","#9245f3"]}
+                  loginButtonTextColor="yellow"
                 />
               </div>
               <div className="card-actions justify-center mt-4">

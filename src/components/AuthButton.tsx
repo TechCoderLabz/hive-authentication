@@ -14,6 +14,8 @@ export const AuthButton: React.FC<
   isActiveFieldVisible = false,
   onClose,
   onSignMessage,
+  loginButtonColors,
+  loginButtonTextColor,
   theme = "light", // Default to "light" theme
 }) => {
   const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
@@ -44,6 +46,23 @@ export const AuthButton: React.FC<
   const getAvatarUrl = (username: string) => {
     return `https://images.hive.blog/u/${username}/avatar`;
   };
+
+  const hasCustomLoginColors =
+    loginButtonColors && loginButtonColors.length > 0;
+
+  const loginButtonStyle: React.CSSProperties | undefined =
+    hasCustomLoginColors || loginButtonTextColor
+      ? {
+          ...(hasCustomLoginColors && {
+            background:
+              loginButtonColors!.length === 1
+                ? loginButtonColors![0]
+                : `linear-gradient(90deg, ${loginButtonColors!.join(", ")})`,
+          }),
+          ...(loginButtonTextColor && { color: loginButtonTextColor }),
+        }
+      : undefined;
+
   return (
     <>
       {currentUser ? (
@@ -77,10 +96,13 @@ export const AuthButton: React.FC<
       ) : (
         <button
           className={`btn ${
-            theme === "dark"
+            hasCustomLoginColors
+              ? "border-none focus:outline-none focus:ring-0"
+              : theme === "dark"
               ? "bg-primary text-white hover:bg-primary-focus border-none"
               : "btn-primary"
           }`}
+          style={loginButtonStyle}
           onClick={handleButtonClick}
         >
           Login

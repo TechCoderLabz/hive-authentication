@@ -86,5 +86,13 @@ export interface AuthButtonProps {
   isActiveFieldVisible?: boolean;
   onClose?: () => void;
   onSignMessage: (username: string) => string;
+  /**
+   * Optional colors for the Login button.
+   * - Pass a single color: ['#ff0000']
+   * - Or multiple colors for a gradient: ['#ff0000', '#00ff00', '#0000ff']
+   */
+  loginButtonColors?: string[];
+  /** Optional color for the "Login" text when the user is not logged in. */
+  loginButtonTextColor?: string;
 }
 

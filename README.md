@@ -344,6 +344,14 @@ interface AuthButtonProps {
   isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key field in private key login
   onClose?: () => void;
   onSignMessage: (username: string) => string;
+  /**
+   * Optional colors for the Login button.
+   * - Single color: ['#ff0000']
+   * - Gradient: ['#ff0000', '#00ff00', '#0000ff']
+   */
+  loginButtonColors?: string[];
+  /** Optional color for the "Login" text when the user is not logged in. */
+  loginButtonTextColor?: string;
 }
 ```
 
@@ -356,6 +364,12 @@ interface AuthButtonProps {
   shouldShowSwitchUser={true}
   isActiveFieldVisible={false}
   onSignMessage={(username) => `${new Date().toISOString()}:${username}`}
+  // Solid color example
+  // loginButtonColors={["#ef4444"]}
+  // Gradient example
+  // loginButtonColors={["#ec4899", "#8b5cf6"]}
+  // Custom text color
+  // loginButtonTextColor="#ffffff"
 />
 ```
 
