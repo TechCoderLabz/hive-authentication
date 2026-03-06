@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AuthButton } from "./components/AuthButton";
 import { useAuthStore } from "./store/authStore";
-import type { HiveAuthResult, LoggedInUser } from "./types/auth";
+import type { HiveAuthResult, LoggedInUser, Web2AuthResult } from "./types/auth";
 import { initAioha, KeyTypes } from '@aioha/aioha'
 import { AiohaProvider } from '@aioha/react-provider'
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
@@ -64,6 +64,24 @@ function App() {
     // Apply the theme manually by setting a data-theme attribute on the HTML element
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  const handleWeb2Authenticate = async (
+    web2Result: Web2AuthResult
+  ): Promise<string> => {
+    console.log("Web2 authentication result:", web2Result);
+    console.log("Firebase ID Token:", web2Result.idToken);
+    console.log("Provider:", web2Result.provider);
+    console.log("Email:", web2Result.email);
+    console.log("Display Name:", web2Result.displayName);
+
+    // In production, send the idToken to your backend for verification
+    return JSON.stringify({
+      message: "Web2 authentication successful",
+      provider: web2Result.provider,
+      email: web2Result.email,
+      uid: web2Result.uid,
+    });
+  };
 
   const handleAuthenticate = async (
     hiveResult: HiveAuthResult
@@ -170,8 +188,19 @@ function App() {
                   }}
                   theme={theme} // Pass theme to AuthButton
                   // Example: custom login button color / gradient
-                  loginButtonColors={["#e31337"]}
-                  loginButtonTextColor="white"
+                  // loginButtonColors={["#e31337"]}
+                  // loginButtonTextColor="white"
+                  web2Config={{
+                    apiKey: "AIzaSyAAsHQckkVppFPHzGn8nz6IVSOf5XkkB0I",
+                    authDomain: "hivefreedomdollar.firebaseapp.com",
+                    databaseURL: "https://hivefreedomdollar-default-rtdb.firebaseio.com",
+                    projectId: "hivefreedomdollar",
+                    storageBucket: "hivefreedomdollar.firebasestorage.app",
+                    messagingSenderId: "826234677679",
+                    appId: "1:826234677679:web:e0858595cf47f332ae675a",
+                    measurementId: "G-LE0EX9LLFH",
+                  }}
+                  onWeb2Authenticate={handleWeb2Authenticate}
                 />
               </div>
               <div className="card-actions justify-center mt-4">

@@ -16,6 +16,8 @@ export const AuthButton: React.FC<
   onSignMessage,
   loginButtonColors,
   loginButtonTextColor,
+  web2Config,
+  onWeb2Authenticate,
   theme = "light", // Default to "light" theme
 }) => {
   const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
@@ -43,8 +45,24 @@ export const AuthButton: React.FC<
       setIsLoginDialogOpen(true);
     }
   };
-  const getAvatarUrl = (username: string) => {
-    return `https://images.hive.blog/u/${username}/avatar`;
+  const getAvatarUrl = () => {
+    if (currentUser?.loginType === 'web2') {
+      // Use Google photo or Gravatar for email users
+      if (currentUser.photoURL) return currentUser.photoURL;
+      // Gravatar fallback using email
+      if (currentUser.email) {
+        return `https://www.gravatar.com/avatar/?d=mp`;
+      }
+      return 'https://www.gravatar.com/avatar/?d=mp';
+    }
+    return `https://images.hive.blog/u/${currentUser?.username}/avatar`;
+  };
+
+  const getDisplayName = () => {
+    if (currentUser?.loginType === 'web2') {
+      return currentUser.displayName || currentUser.email || currentUser.username;
+    }
+    return currentUser?.username;
   };
 
   const hasCustomLoginColors =
@@ -76,11 +94,11 @@ export const AuthButton: React.FC<
           <div className="avatar">
             <div className="w-7 h-7 rounded-full">
               <img
-                src={getAvatarUrl(currentUser.username)}
-                alt={`${currentUser.username} avatar`}
+                src={getAvatarUrl()}
+                alt={`${getDisplayName()} avatar`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
-                    "https://images.hive.blog/u/0/avatar";
+                    "https://www.gravatar.com/avatar/?d=mp";
                 }}
               />
             </div>
@@ -90,7 +108,7 @@ export const AuthButton: React.FC<
               theme === "dark" ? "text-gray-300" : "text-gray-800"
             }`}
           >
-            {currentUser.username}
+            {getDisplayName()}
           </div>
         </div>
       ) : (
@@ -124,6 +142,8 @@ export const AuthButton: React.FC<
         isActiveFieldVisible={isActiveFieldVisible}
         loginButtonColors={loginButtonColors}
         loginButtonTextColor={loginButtonTextColor}
+        web2Config={web2Config}
+        onWeb2Authenticate={onWeb2Authenticate}
       />
 
       <SwitchUserModal
@@ -140,6 +160,8 @@ export const AuthButton: React.FC<
         theme={theme}
         loginButtonColors={loginButtonColors}
         loginButtonTextColor={loginButtonTextColor}
+        web2Config={web2Config}
+        onWeb2Authenticate={onWeb2Authenticate}
       />
     </>
   );

@@ -154,11 +154,11 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     
     authenticateWithCallback: async (hiveResult, callback) => {
       set({ isLoading: true, error: null });
-      
+
       try {
         // Call the dev's callback function
         const serverResponse = await callback(hiveResult);
-        
+
         // Create the complete user object
         const user: LoggedInUser = {
           username: hiveResult.username,
@@ -169,16 +169,52 @@ export const useAuthStore = create<AuthStore>((set, get) => {
           serverResponse,
           privatePostingKey: hiveResult.privatePostingKey,
           privateActiveKey: hiveResult.privateActiveKey,
+          loginType: 'hive',
         };
-        
+
         // Add to store
         get().addLoggedInUser(user);
         get().setCurrentUser(user);
-        
+
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
         set({ error: errorMessage });
 
+        throw error;
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    authenticateWeb2WithCallback: async (web2Result, callback) => {
+      set({ isLoading: true, error: null });
+
+      try {
+        const serverResponse = await callback(web2Result);
+
+        // Use email or displayName as the username for Web2 users
+        const username = web2Result.email || web2Result.displayName || web2Result.uid;
+
+        const user: LoggedInUser = {
+          username,
+          provider: web2Result.provider,
+          challenge: '',
+          publicKey: '',
+          proof: '',
+          serverResponse,
+          loginType: 'web2',
+          web2Provider: web2Result.provider,
+          email: web2Result.email,
+          displayName: web2Result.displayName,
+          photoURL: web2Result.photoURL,
+          uid: web2Result.uid,
+        };
+
+        get().addLoggedInUser(user);
+        get().setCurrentUser(user);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Web2 authentication failed';
+        set({ error: errorMessage });
         throw error;
       } finally {
         set({ isLoading: false });
