@@ -22,6 +22,17 @@ const aioha = initAioha(
   }
 )
 
+const web2Config = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
 
 function App() {
   const { currentUser, loggedInUsers, switchToActiveForCurrentUser, switchToPostingForCurrentUser } = useAuthStore();
@@ -190,16 +201,7 @@ function App() {
                   // Example: custom login button color / gradient
                   // loginButtonColors={["#e31337"]}
                   // loginButtonTextColor="white"
-                  web2Config={{
-                    apiKey: "AIzaSyAAsHQckkVppFPHzGn8nz6IVSOf5XkkB0I",
-                    authDomain: "hivefreedomdollar.firebaseapp.com",
-                    databaseURL: "https://hivefreedomdollar-default-rtdb.firebaseio.com",
-                    projectId: "hivefreedomdollar",
-                    storageBucket: "hivefreedomdollar.firebasestorage.app",
-                    messagingSenderId: "826234677679",
-                    appId: "1:826234677679:web:e0858595cf47f332ae675a",
-                    measurementId: "G-LE0EX9LLFH",
-                  }}
+                  web2Config={web2Config}
                   onWeb2Authenticate={handleWeb2Authenticate}
                 />
               </div>

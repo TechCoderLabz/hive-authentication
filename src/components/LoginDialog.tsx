@@ -136,6 +136,11 @@ export const LoginDialog: React.FC<
       }
     };
   }, []);
+  useEffect(() => {
+    if (!isOpen) {
+      setShowWeb2Login(false);
+    }
+  }, [isOpen]);
   const handleLogin = async (proof: string) => {
     if (!username.trim()) return;
 
@@ -241,34 +246,36 @@ export const LoginDialog: React.FC<
           theme === "dark" ? "bg-gray-900" : "bg-white"
         }`}
       >
-        <div className="flex items-center justify-between mb-4">
-          {showBackButton && (
-            <button
-              className="btn btn-sm btn-circle btn-ghost"
-              onClick={onBack}
+        {!showWeb2Login && (
+          <div className="flex items-center justify-between mb-4">
+            {showBackButton && (
+              <button
+                className="btn btn-sm btn-circle btn-ghost"
+                onClick={onBack}
+              >
+                ←
+              </button>
+            )}
+
+            <h3
+              className="font-bold text-lg flex-1 text-center"
+              style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
             >
-              ←
+              {showBackButton ? 'Add Account' : 'Login with Hive'}
+            </h3>
+
+            <button
+              className={`btn btn-sm btn-circle btn-ghost ${
+                theme === "dark"
+                  ? "bg-gray-700 hover:bg-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 border border-gray-300"
+              }`}
+              onClick={onClose}
+            >
+              ✕
             </button>
-          )}
-
-          <h3
-            className="font-bold text-lg flex-1 text-center"
-            style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
-          >
-            {showBackButton ? 'Add Account' : 'Login with Hive'}
-          </h3>
-
-          <button
-            className={`btn btn-sm btn-circle btn-ghost ${
-              theme === "dark"
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 border border-gray-300"
-            }`}
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
+          </div>
+        )}
         {/* HiveAuth QR Code Display - Show this when QR code is active */}
         {showQRCode && hiveAuthPayload && (
           <div className="text-center">
@@ -310,7 +317,7 @@ export const LoginDialog: React.FC<
           </div>
         )}
         {/* Login Form - Hide this when QR code is active */}
-        {!showQRCode && (
+        {!showQRCode && !showWeb2Login && (
           <>
             <div className="form-control w-full">
               <label className="label">
@@ -569,7 +576,7 @@ export const LoginDialog: React.FC<
           </>
         )}
 
-        {error && (
+        {error && !showWeb2Login && (
           <div className="alert alert-error mt-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -577,26 +584,23 @@ export const LoginDialog: React.FC<
             <span>{error}</span>
           </div>
         )}
+
+        {showWeb2Login && hasWeb2Config && (
+          <Web2LoginDialog
+            isOpen={true}
+            embedded={true}
+            onClose={onClose}
+            onBack={() => setShowWeb2Login(false)}
+            web2Config={web2Config!}
+            onWeb2Authenticate={onWeb2Authenticate!}
+            theme={theme}
+            loginButtonColors={loginButtonColors}
+            loginButtonTextColor={loginButtonTextColor}
+          />
+        )}
       </div>
       {/* Backdrop */}
       <div className="modal-backdrop" onClick={onClose}></div>
-
-      {/* Web2 Login Dialog */}
-      {hasWeb2Config && (
-        <Web2LoginDialog
-          isOpen={showWeb2Login}
-          onClose={() => {
-            setShowWeb2Login(false);
-            onClose();
-          }}
-          onBack={() => setShowWeb2Login(false)}
-          web2Config={web2Config!}
-          onWeb2Authenticate={onWeb2Authenticate!}
-          theme={theme}
-          loginButtonColors={loginButtonColors}
-          loginButtonTextColor={loginButtonTextColor}
-        />
-      )}
     </div>
   );
 };
