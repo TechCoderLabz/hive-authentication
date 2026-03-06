@@ -24,6 +24,13 @@ export interface LoggedInUser {
   serverResponse: string; // JSON string from dev's app
   privatePostingKey?: string;
   privateActiveKey?: string; // Optional active key (private key login only)
+  // Web2 fields (populated when logged in via Google/Email)
+  loginType?: 'hive' | 'web2';
+  web2Provider?: 'google' | 'email';
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+  uid?: string;
 }
 
 export interface AuthStore {
@@ -50,6 +57,10 @@ export interface AuthStore {
     hiveResult: HiveAuthResult,
     callback: (hiveResult: HiveAuthResult) => Promise<string>
   ) => Promise<void>;
+  authenticateWeb2WithCallback: (
+    web2Result: Web2AuthResult,
+    callback: (web2Result: Web2AuthResult) => Promise<string>
+  ) => Promise<void>;
   switchToActiveForCurrentUser: () => Promise<void>;
   switchToPostingForCurrentUser: () => Promise<void>;
 }
@@ -66,6 +77,10 @@ export interface SwitchUserModalProps {
   loginButtonColors?: string[];
   /** Optional color for \"Login\" / \"Add Account\" text. */
   loginButtonTextColor?: string;
+  /** Optional Firebase config for Web2 login. */
+  web2Config?: Web2Config;
+  /** Optional callback for Web2 authentication result. */
+  onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
 }
 
 export interface LoginDialogProps {
@@ -82,6 +97,26 @@ export interface LoginDialogProps {
   loginButtonColors?: string[];
   /** Optional color for the \"Login\" text. */
   loginButtonTextColor?: string;
+}
+
+export interface Web2Config {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  databaseURL?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId: string;
+  measurementId?: string;
+}
+
+export interface Web2AuthResult {
+  provider: 'google' | 'email';
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  idToken: string;
 }
 
 export interface AuthButtonProps {
@@ -102,5 +137,9 @@ export interface AuthButtonProps {
   loginButtonColors?: string[];
   /** Optional color for the "Login" text when the user is not logged in. */
   loginButtonTextColor?: string;
+  /** Optional Firebase config for Web2 login (Google & Email). If not provided, Web2 login button is hidden. */
+  web2Config?: Web2Config;
+  /** Optional callback for Web2 authentication result. Required if web2Config is provided. */
+  onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
 }
 

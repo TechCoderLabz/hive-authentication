@@ -50,7 +50,7 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // Your authentication callback - works for both login AND adding accounts
+  // Your Hive authentication callback - works for both login AND adding accounts
   const handleAuthenticate = async (hiveResult) => {
     // Make your API call here
     const response = await fetch('/api/login', {
@@ -74,6 +74,20 @@ function App() {
     return JSON.stringify(data);
   };
 
+  // Optional Web2 callback (Google / Email)
+  const handleWeb2Authenticate = async (web2Result) => {
+    const response = await fetch('/api/web2-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(web2Result),
+    });
+    if (!response.ok) {
+      throw new Error('Web2 authentication failed');
+    }
+    const data = await response.json();
+    return JSON.stringify(data);
+  };
+
   return (
     <AiohaProvider aioha={aioha}>
       <div>
@@ -90,6 +104,8 @@ function App() {
             onSignMessage={(username) => {
               return `${new Date().toISOString()}:${username}`;
             }}
+            web2Config={import.meta.env.VITE_FIREBASE_CONFIG ? JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG) : undefined}
+            onWeb2Authenticate={handleWeb2Authenticate}
             theme={"light"}
           />
           
@@ -340,6 +356,7 @@ interface AuthButtonProps {
   encryptionKey: string;   // Required: encryption key for local storage (e.g. from your env/config)
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
   aioha: Aioha;
+  theme?: "light" | "dark";           // default: "light"
   shouldShowSwitchUser?: boolean;   // default: true
   isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key field in private key login
   onClose?: () => void;
@@ -352,6 +369,10 @@ interface AuthButtonProps {
   loginButtonColors?: string[];
   /** Optional color for the "Login" text when the user is not logged in. */
   loginButtonTextColor?: string;
+  /** Optional Firebase config for Web2 login (Google & Email). If omitted, Web2 button is hidden. */
+  web2Config?: Web2Config;
+  /** Optional callback for Web2 authentication result. Required when web2Config is provided. */
+  onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
 }
 ```
 
@@ -370,6 +391,9 @@ interface AuthButtonProps {
   // loginButtonColors={["#ec4899", "#8b5cf6"]}
   // Custom text color
   // loginButtonTextColor="#ffffff"
+  // Optional Web2 login support (Google / Email)
+  // web2Config={firebaseConfig}
+  // onWeb2Authenticate={handleWeb2Authenticate}
 />
 ```
 
@@ -407,6 +431,26 @@ interface LoggedInUser {
   serverResponse: string;      // Your server response
   privatePostingKey?: string;
   privateActiveKey?: string;  // Optional active key when provided at login
+}
+
+interface Web2Config {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  databaseURL?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId: string;
+  measurementId?: string;
+}
+
+interface Web2AuthResult {
+  provider: "google" | "email";
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  idToken: string;
 }
 ```
 

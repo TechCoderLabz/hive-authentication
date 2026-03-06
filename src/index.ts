@@ -2,6 +2,7 @@
 export { AuthButton } from './components/AuthButton';
 export { LoginDialog } from './components/LoginDialog';
 export { SwitchUserModal } from './components/SwitchUserModal';
+export { Web2LoginDialog } from './components/Web2LoginDialog';
 export { Wallet } from './components/Wallet';
 export { VideoFeed } from './components/video/VideoFeed';
 export { BottomToolbarWithSlider } from './components/BottomToolbarWithSlider';
@@ -22,5 +23,7 @@ export type {
   LoggedInUser,
   AuthStore,
   SwitchUserModalProps,
-  LoginDialogProps
+  LoginDialogProps,
+  Web2Config,
+  Web2AuthResult,
 } from './types/auth';

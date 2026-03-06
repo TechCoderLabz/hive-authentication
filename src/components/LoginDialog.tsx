@@ -7,9 +7,16 @@ import { Providers } from '@aioha/aioha';
 import KeychainIcon from '../assets/keychain.svg'
 import HiveAuthIcon from '../assets/hiveauth-light.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
+import Web2Icon from '../assets/web2.svg'
+import { Web2LoginDialog } from './Web2LoginDialog'
+import type { Web2Config, Web2AuthResult } from '../types/auth'
 
 export const LoginDialog: React.FC<
-  LoginDialogProps & { theme?: "light" | "dark" }
+  LoginDialogProps & {
+    theme?: "light" | "dark";
+    web2Config?: Web2Config;
+    onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
+  }
 > = ({
   isOpen,
   onClose,
@@ -22,6 +29,8 @@ export const LoginDialog: React.FC<
   isActiveFieldVisible = false,
   loginButtonColors,
   loginButtonTextColor,
+  web2Config,
+  onWeb2Authenticate,
 }) => {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -34,6 +43,9 @@ export const LoginDialog: React.FC<
   const [privateActiveKey, setPrivateActiveKey] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isKeychainEnabled, setIsKeychainEnabled] = useState(false);
+  const [showWeb2Login, setShowWeb2Login] = useState(false);
+
+  const hasWeb2Config = !!web2Config && !!onWeb2Authenticate;
 
   const { isLoading, authenticateWithCallback, hiveAuthPayload, setHiveAuthPayload, currentUser } = useAuthStore();
 
@@ -124,6 +136,11 @@ export const LoginDialog: React.FC<
       }
     };
   }, []);
+  useEffect(() => {
+    if (!isOpen) {
+      setShowWeb2Login(false);
+    }
+  }, [isOpen]);
   const handleLogin = async (proof: string) => {
     if (!username.trim()) return;
 
@@ -207,15 +224,14 @@ export const LoginDialog: React.FC<
   const hasCustomLoginColors =
     loginButtonColors && loginButtonColors.length > 0;
 
-  const loginButtonStyle: React.CSSProperties | undefined =
-    hasCustomLoginColors
-      ? {
-          background:
-            loginButtonColors!.length === 1
-              ? loginButtonColors![0]
-              : `linear-gradient(90deg, ${loginButtonColors!.join(", ")})`,
-        }
-      : undefined;
+  const loginButtonStyle = hasCustomLoginColors
+    ? {
+        background:
+          loginButtonColors!.length === 1
+            ? loginButtonColors![0]
+            : `linear-gradient(90deg, ${loginButtonColors!.join(", ")})`,
+      }
+    : undefined;
 
   if (!isOpen) return null;
 
@@ -230,34 +246,36 @@ export const LoginDialog: React.FC<
           theme === "dark" ? "bg-gray-900" : "bg-white"
         }`}
       >
-        <div className="flex items-center justify-between mb-4">
-          {showBackButton && (
-            <button
-              className="btn btn-sm btn-circle btn-ghost"
-              onClick={onBack}
+        {!showWeb2Login && (
+          <div className="flex items-center justify-between mb-4">
+            {showBackButton && (
+              <button
+                className="btn btn-sm btn-circle btn-ghost"
+                onClick={onBack}
+              >
+                ←
+              </button>
+            )}
+
+            <h3
+              className="font-bold text-lg flex-1 text-center"
+              style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
             >
-              ←
+              {showBackButton ? 'Add Account' : 'Login with Hive'}
+            </h3>
+
+            <button
+              className={`btn btn-sm btn-circle btn-ghost ${
+                theme === "dark"
+                  ? "bg-gray-700 hover:bg-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 border border-gray-300"
+              }`}
+              onClick={onClose}
+            >
+              ✕
             </button>
-          )}
-
-          <h3
-            className="font-bold text-lg flex-1 text-center"
-            style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
-          >
-            {showBackButton ? 'Add Account' : 'Login with Hive'}
-          </h3>
-
-          <button
-            className={`btn btn-sm btn-circle btn-ghost ${
-              theme === "dark"
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 border border-gray-300"
-            }`}
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
+          </div>
+        )}
         {/* HiveAuth QR Code Display - Show this when QR code is active */}
         {showQRCode && hiveAuthPayload && (
           <div className="text-center">
@@ -299,7 +317,7 @@ export const LoginDialog: React.FC<
           </div>
         )}
         {/* Login Form - Hide this when QR code is active */}
-        {!showQRCode && (
+        {!showQRCode && !showWeb2Login && (
           <>
             <div className="form-control w-full">
               <label className="label">
@@ -490,6 +508,24 @@ export const LoginDialog: React.FC<
                     </span>
                   </label>
                 </div>
+
+                {/* Web2 Login Option */}
+                {hasWeb2Config && (
+                  <div className="form-control">
+                    <label
+                      className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
+                        theme === "dark"
+                          ? "border border-base-300 hover:bg-gray-700 hover:text-white"
+                          : "border border-gray-300 hover:bg-gray-200 hover:text-black"
+                      }`}
+                      onClick={() => setShowWeb2Login(true)}
+                    >
+                      <span className="label-text">
+                        <img src={Web2Icon} alt="Web2 Login" className='w-10 h-10' />
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
 
 
@@ -540,13 +576,27 @@ export const LoginDialog: React.FC<
           </>
         )}
 
-        {error && (
+        {error && !showWeb2Login && (
           <div className="alert alert-error mt-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{error}</span>
           </div>
+        )}
+
+        {showWeb2Login && hasWeb2Config && (
+          <Web2LoginDialog
+            isOpen={true}
+            embedded={true}
+            onClose={onClose}
+            onBack={() => setShowWeb2Login(false)}
+            web2Config={web2Config!}
+            onWeb2Authenticate={onWeb2Authenticate!}
+            theme={theme}
+            loginButtonColors={loginButtonColors}
+            loginButtonTextColor={loginButtonTextColor}
+          />
         )}
       </div>
       {/* Backdrop */}

@@ -6,6 +6,7 @@ import { AuthService } from '../services/authService';
 import KeychainIcon from '../assets/keychain.svg'
 import HiveAuthIcon from '../assets/hiveauth-light.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
+import Web2Icon from '../assets/web2.svg'
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & { theme?: "light" | "dark" }
@@ -20,12 +21,19 @@ export const SwitchUserModal: React.FC<
   theme = "light",
   loginButtonColors,
   loginButtonTextColor,
+  web2Config,
+  onWeb2Authenticate,
 }) => {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const { currentUser, loggedInUsers, setCurrentUser, removeLoggedInUser, clearAllUsers } = useAuthStore();
 
   const handleSwitchUser = async (user: LoggedInUser) => {
     setCurrentUser(user);
+    // Web2 users don't need aioha switching
+    if (user.loginType === 'web2') {
+      onClose();
+      return;
+    }
     if (user.privatePostingKey) {
       const currentLoggedInUser = aioha.getCurrentUser();
       const otherLogins = aioha.getOtherLogins();
@@ -40,9 +48,11 @@ export const SwitchUserModal: React.FC<
     AuthService.switchUser(aioha, user.username);
     onClose();
   };
-  const handleLogoutUser = (username: string) => {
-    removeLoggedInUser(username);
-    AuthService.removeUser(aioha, username);
+  const handleLogoutUser = (user: LoggedInUser) => {
+    removeLoggedInUser(user.username);
+    if (user.loginType !== 'web2') {
+      AuthService.removeUser(aioha, user.username);
+    }
   };
   const handleLogoutAll = async () => {
     try {
@@ -68,8 +78,9 @@ export const SwitchUserModal: React.FC<
     setShowAddAccount(false);
   };
 
-  const getProviderIcon = (provider: string) => {
-    switch (provider) {
+  const getProviderIcon = (user: LoggedInUser) => {
+    if (user.loginType === 'web2') return Web2Icon;
+    switch (user.provider) {
       case 'keychain':
         return KeychainIcon;
       case 'hiveauth':
@@ -79,8 +90,11 @@ export const SwitchUserModal: React.FC<
     }
   };
 
-  const getProviderName = (provider: string) => {
-    switch (provider) {
+  const getProviderName = (user: LoggedInUser) => {
+    if (user.loginType === 'web2') {
+      return user.web2Provider === 'google' ? 'Google' : 'Email';
+    }
+    switch (user.provider) {
       case 'keychain':
         return 'Keychain';
       case 'hiveauth':
@@ -90,10 +104,25 @@ export const SwitchUserModal: React.FC<
     }
   };
 
+  const getUserAvatar = (user: LoggedInUser) => {
+    if (user.loginType === 'web2') {
+      if (user.photoURL) return user.photoURL;
+      return 'https://www.gravatar.com/avatar/?d=mp';
+    }
+    return `https://images.hive.blog/u/${user.username}/avatar`;
+  };
+
+  const getUserDisplayName = (user: LoggedInUser) => {
+    if (user.loginType === 'web2') {
+      return user.displayName || user.email || user.username;
+    }
+    return user.username;
+  };
+
   const hasCustomLoginColors =
     loginButtonColors && loginButtonColors.length > 0;
 
-  const addAccountButtonStyle: React.CSSProperties | undefined =
+  const addAccountButtonStyle =
     hasCustomLoginColors || loginButtonTextColor
       ? {
           ...(hasCustomLoginColors && {
@@ -106,7 +135,7 @@ export const SwitchUserModal: React.FC<
         }
       : undefined;
 
-  const currentBadgeStyle: React.CSSProperties | undefined =
+  const currentBadgeStyle =
     hasCustomLoginColors || loginButtonTextColor
       ? {
           ...(hasCustomLoginColors && {
@@ -131,6 +160,8 @@ export const SwitchUserModal: React.FC<
         isActiveFieldVisible={isActiveFieldVisible}
         loginButtonColors={loginButtonColors}
         loginButtonTextColor={loginButtonTextColor}
+        web2Config={web2Config}
+        onWeb2Authenticate={onWeb2Authenticate}
       />
     );
   }
@@ -180,17 +211,19 @@ export const SwitchUserModal: React.FC<
               <div className="avatar">
                 <div className="w-10 h-10 rounded-full">
                   <img
-                    src={`https://images.hive.blog/u/${user.username}/avatar`}
-                    alt={`${user.username} avatar`}
+                    src={getUserAvatar(user)}
+                    alt={`${getUserDisplayName(user)} avatar`}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.hive.blog/u/0/avatar';
+                      (e.target as HTMLImageElement).src = user.loginType === 'web2'
+                        ? 'https://www.gravatar.com/avatar/?d=mp'
+                        : 'https://images.hive.blog/u/0/avatar';
                     }}
                   />
                 </div>
               </div>
               <div className='avatar'>
                 <div className='w-10 h-10 rounded-full'>
-                  <img src={getProviderIcon(user.provider)} alt={`${getProviderName(user.provider)}`} />
+                  <img src={getProviderIcon(user)} alt={`${getProviderName(user)}`} />
                 </div>
               </div>
 
@@ -201,14 +234,14 @@ export const SwitchUserModal: React.FC<
                     theme === "dark" ? "text-white" : "text-black"
                   }`}
                 >
-                  {user.username}
+                  {getUserDisplayName(user)}
                 </p>
                 <p
                   className={`text-sm capitalize ${
                     theme === "dark" ? "text-gray-400" : "text-gray-500"
                   }`}
                 >
-                  {getProviderName(user.provider)}
+                  {getProviderName(user)}
                 </p>
               </div>
 
@@ -226,7 +259,7 @@ export const SwitchUserModal: React.FC<
                     className="btn btn-xs btn-outline btn-error"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleLogoutUser(user.username);
+                      handleLogoutUser(user);
                     }}
                   >
                     Logout
