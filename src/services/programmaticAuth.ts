@@ -106,7 +106,7 @@ export class ProgrammaticAuth {
       if (serverCallback) {
         const authStore = useAuthStore.getState();
         await authStore.authenticateWithCallback(hiveResult, serverCallback);
-        return authStore.currentUser!;
+        return useAuthStore.getState().currentUser!;
       } else {
         // Create user object without server validation
         const user: LoggedInUser = {
