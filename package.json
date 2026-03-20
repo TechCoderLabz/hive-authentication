@@ -24,8 +24,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@aioha/aioha": "^1.7.0",
-    "@aioha/react-provider": "^1.7.0",
+    "@aioha/aioha": "^1.8.2",
+    "@aioha/react-ui": "^1.8.2",
     "@tailwindcss/vite": "^4.1.12",
     "crypto-js": "^4.2.0",
     "daisyui": "^5.1.6",

@@ -3,7 +3,7 @@ import { AuthButton } from "./components/AuthButton";
 import { useAuthStore } from "./store/authStore";
 import type { HiveAuthResult, LoggedInUser, Web2AuthResult } from "./types/auth";
 import { initAioha, KeyTypes } from '@aioha/aioha'
-import { AiohaProvider } from '@aioha/react-provider'
+import { AiohaProvider } from '@aioha/react-ui'
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
 import type { Operation } from "@hiveio/dhive";
 import { ReportModal } from "./components/ReportModal";
