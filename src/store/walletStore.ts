@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
-import type { WalletStore, WalletData } from "../types/wallet";
+import type { WalletStore, WalletData, Transaction } from "../types/wallet";
 import * as dhive from "@hiveio/dhive";
 const dhiveClient = new dhive.Client(["https://api.hive.blog"]);
 
@@ -48,15 +48,58 @@ const convertHivetoUSDData = async (hiveAmount: string | number) => {
   }
 };
 
+// ------------------- Transaction Helpers -------------------
+const fetchAccountHistory = async (
+  username: string,
+  limit: number = 100
+): Promise<Transaction[]> => {
+  const response = await fetch("https://api.hive.blog/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: 0,
+      jsonrpc: "2.0",
+      method: "condenser_api.get_account_history",
+      params: [username, -1, limit, "4", null],
+    }),
+  });
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message || "Failed to fetch transactions");
+
+  const transactions: Transaction[] = (data.result || [])
+    .filter((entry: any) => entry[1]?.op?.[0] === "transfer")
+    .map((entry: any) => {
+      const [id, tx] = entry;
+      const op = tx.op[1];
+      return {
+        id,
+        timestamp: tx.timestamp,
+        type: op.from === username ? "sent" : "received",
+        amount: op.amount,
+        from: op.from,
+        to: op.to,
+        memo: op.memo || "",
+        trx_id: tx.trx_id,
+      } as Transaction;
+    })
+    .reverse();
+
+  return transactions;
+};
+
 // ------------------- WalletStore -------------------
 export const useWalletStore = create<WalletStore>((set) => ({
   walletData: null,
   isLoading: false,
   error: null,
+  transactions: [],
+  isLoadingTransactions: false,
+  transactionError: null,
 
   setWalletData: (data) => set({ walletData: data }),
 
-  clearWalletData: () => set({ walletData: null, error: null }),
+  clearWalletData: () => set({ walletData: null, error: null, transactions: [], transactionError: null }),
 
   fetchWalletData: async (username: string) => {
     set({ isLoading: true, error: null });
@@ -133,6 +176,22 @@ export const useWalletStore = create<WalletStore>((set) => ({
       return emptyWallet;
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchTransactions: async (username: string, limit: number = 100) => {
+    set({ isLoadingTransactions: true, transactionError: null });
+    try {
+      const transactions = await fetchAccountHistory(username, limit);
+      set({ transactions });
+      return transactions;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Failed to fetch transactions";
+      console.error("Transaction fetch error:", msg);
+      set({ transactionError: msg });
+      return [];
+    } finally {
+      set({ isLoadingTransactions: false });
     }
   },
 }));

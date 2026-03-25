@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type JSX } from "react";
+import React, { useEffect, type JSX } from "react";
 import {
   FaWallet,
   FaMoneyBill,
@@ -8,137 +8,87 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { useWalletStore } from "../store/walletStore";
+import { TransactionHistory } from "./TransactionHistory";
 
 interface WalletProps {
   username?: string;
-  backgroundColors?: string[];
-  fontColor?: string;
-  cardColor?: string;
-  balanceColor?: string;
-  hbdColor?: string;
-  savingsColor?: string;
-  savingsHbdColor?: string;
-  powerColor?: string;
-  estimatedValueColor?: string;
-  errorColor?: string;
+  className?: string;
 }
 
-export const Wallet: React.FC<WalletProps> = ({
-  username,
-  backgroundColors,
-  fontColor,
-  cardColor,
-  balanceColor,
-  hbdColor,
-  savingsColor,
-  savingsHbdColor,
-  powerColor,
-  estimatedValueColor,
-  errorColor,
-}) => {
+interface WalletTileProps {
+  label: string;
+  value?: string;
+  icon?: JSX.Element;
+  iconBgClass?: string;
+  iconTextClass?: string;
+  valueClass?: string;
+}
+
+export const Wallet: React.FC<WalletProps> = ({ username, className = "" }) => {
   const { walletData, fetchWalletData, isLoading, error } = useWalletStore();
 
-  const [isDarkMode, setIsDarkMode] = useState(
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  );
-
-  // Listen to system theme changes
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
-
-  // Fetch wallet data
   useEffect(() => {
     if (username) fetchWalletData(username);
   }, [username, fetchWalletData]);
 
-  const bgColors =
-    backgroundColors ?? (isDarkMode ? ["#121212", "#23272F"] : ["#f5f5f5", "#ffffff"]);
-  const textColor = fontColor ?? (isDarkMode ? "#fff" : "#000");
-  const cardBgColor = cardColor ?? (isDarkMode ? "#2c2c2c" : "#fff");
-
-  const tileColors = {
-    balance: balanceColor ?? "#90cdf4",
-    hbd: hbdColor ?? "#9ae6b4",
-    savings: savingsColor ?? "#fbd38d",
-    savingsHbd: savingsHbdColor ?? "#d6bcfa",
-    power: powerColor ?? "#f6ad55",
-    estimatedValue: estimatedValueColor ?? "#3182ce",
-    error: errorColor ?? "#fed7d7",
-  };
-
-  // Single tile component
-  const WalletTile: React.FC<{ label: string; value?: string; icon?: JSX.Element; color?: string }> =
-    ({ label, value, icon, color }) => (
-      <div
-        className="flex items-center justify-between p-4 rounded-lg shadow mb-3 transition-colors"
-        style={{ backgroundColor: cardBgColor, color: textColor }}
-      >
-        <div className="flex items-center gap-3">
-          {icon && (
-            <div
-              className="p-2 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: color }}
-            >
-              {icon}
-            </div>
-          )}
-          <span className="font-semibold">{label}</span>
-        </div>
-        <span className="font-medium">{value ?? "-"}</span>
+  const WalletTile: React.FC<WalletTileProps> = ({
+    label,
+    value,
+    icon,
+    iconBgClass = "bg-blue-500/15",
+    iconTextClass = "text-blue-400",
+    valueClass = "text-gray-200",
+  }) => (
+    <div className="flex items-center justify-between p-3.5 rounded-lg bg-gray-800 border border-gray-700 mb-2.5 transition-all duration-200 hover:bg-gray-750 hover:border-gray-600">
+      <div className="flex items-center gap-3">
+        {icon && (
+          <div className={`p-2 rounded-full flex items-center justify-center ${iconBgClass} ${iconTextClass}`}>
+            {icon}
+          </div>
+        )}
+        <span className="font-semibold text-sm text-gray-300">{label}</span>
       </div>
-    );
+      <span className={`font-medium text-sm ${valueClass}`}>{value ?? "-"}</span>
+    </div>
+  );
 
   return (
-    <div
-      className="min-h-screen p-4 transition-colors"
-      style={{
-        background: `linear-gradient(to bottom right, ${bgColors[0]}, ${bgColors[1]})`,
-        color: textColor,
-      }}
-    >
+    <div className={`p-4 transition-all duration-300 ${className}`}>
       <div className="max-w-md mx-auto">
         {/* Profile Header */}
-        <div
-          className="flex flex-col items-center p-6 mb-6 rounded-lg shadow"
-          style={{ backgroundColor: cardBgColor }}
-        >
+        <div className="flex flex-col items-center p-5 mb-5 rounded-xl bg-gray-800 border border-gray-700">
           {username && (
             <img
               src={`https://images.hive.blog/u/${username}/avatar`}
               alt={`${username} avatar`}
-              className="w-20 h-20 rounded-full border-4 border-gray-300 dark:border-gray-600 mb-3"
+              className="w-16 h-16 rounded-full border-3 border-blue-500/30 mb-2.5 transition-transform hover:scale-105"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${username}&background=random`;
+              }}
             />
           )}
-          <div className="text-lg font-bold">{username}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Hive Wallet Overview
-          </div>
-        </div>
-        <div
-          className="text-center rounded-lg shadow p-6 mb-6 transition-colors"
-          style={{ backgroundColor: cardBgColor }}
-        >
-          <div className="text-sm font-semibold">Estimated Value</div>
-          <div
-            className="text-3xl font-bold mt-2"
-            style={{ color: tileColors.estimatedValue }}
-          >
-            {isLoading ? "Loading..." : walletData?.estimated_value ?? "-"}
-          </div>
+          <div className="text-base font-bold text-white">{username}</div>
+          <div className="text-xs text-gray-400">Hive Wallet Overview</div>
         </div>
 
-        {isLoading && <div className="text-center mb-4">Fetching wallet data...</div>}
+        {/* Estimated Value Card */}
+        <div className="text-center rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 p-5 mb-5 transition-all duration-300 hover:from-blue-500 hover:to-purple-500 shadow-lg shadow-blue-500/10">
+          <div className="text-xs font-semibold text-blue-100/80">Estimated Value</div>
+          <div className="text-2xl font-bold mt-1.5 text-white">
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span className="text-lg">Loading...</span>
+              </div>
+            ) : (
+              walletData?.estimated_value ?? "-"
+            )}
+          </div>
+        </div>
 
         {error && (
-          <div
-            className="flex items-center p-3 rounded mb-4"
-            style={{ backgroundColor: tileColors.error, color: "#a00" }}
-          >
-            <FaExclamationTriangle className="mr-2" />
+          <div className="flex items-center p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 mb-4 text-sm">
+            <FaExclamationTriangle className="mr-2 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -147,33 +97,48 @@ export const Wallet: React.FC<WalletProps> = ({
           label="Balance"
           value={walletData?.balance}
           icon={<FaWallet />}
-          color={tileColors.balance}
+          iconBgClass="bg-blue-500/15"
+          iconTextClass="text-blue-400"
+          valueClass="text-blue-300"
         />
         <WalletTile
           label="HBD Balance"
           value={walletData?.hbd_balance}
           icon={<FaMoneyBill />}
-          color={tileColors.hbd}
+          iconBgClass="bg-emerald-500/15"
+          iconTextClass="text-emerald-400"
+          valueClass="text-emerald-300"
         />
         <WalletTile
           label="Savings Balance"
           value={walletData?.savings_balance}
           icon={<FaPiggyBank />}
-          color={tileColors.savings}
+          iconBgClass="bg-amber-500/15"
+          iconTextClass="text-amber-400"
+          valueClass="text-amber-300"
         />
         <WalletTile
-          label="Savings HBD Balance"
+          label="Savings HBD"
           value={walletData?.savings_hbd_balance}
           icon={<FaCoins />}
-          color={tileColors.savingsHbd}
+          iconBgClass="bg-purple-500/15"
+          iconTextClass="text-purple-400"
+          valueClass="text-purple-300"
         />
         <WalletTile
           label="Hive Power"
           value={walletData?.hive_power}
           icon={<FaBolt />}
-          color={tileColors.power}
+          iconBgClass="bg-orange-500/15"
+          iconTextClass="text-orange-400"
+          valueClass="text-orange-300"
         />
+
+        {/* Transaction History */}
+        <TransactionHistory username={username} />
       </div>
     </div>
   );
 };
+
+export default Wallet;

@@ -7,6 +7,7 @@ import { AiohaProvider } from '@aioha/react-ui'
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
 import type { Operation } from "@hiveio/dhive";
 import { ReportModal } from "./components/ReportModal";
+import { Wallet } from "./components/Wallet";
 
 const aioha = initAioha(
   {
@@ -277,6 +278,12 @@ function App() {
           )}
 
         </div>
+
+        {/* Wallet Section */}
+        {currentUser && (
+          <Wallet username={currentUser.username} />
+        )}
+
         <ReportModal
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}

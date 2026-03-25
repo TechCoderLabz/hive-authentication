@@ -4,6 +4,7 @@ export { LoginDialog } from './components/LoginDialog';
 export { SwitchUserModal } from './components/SwitchUserModal';
 export { Web2LoginDialog } from './components/Web2LoginDialog';
 export { Wallet } from './components/Wallet';
+export { TransactionHistory } from './components/TransactionHistory';
 export { VideoFeed } from './components/video/VideoFeed';
 export { BottomToolbarWithSlider } from './components/BottomToolbarWithSlider';
 
