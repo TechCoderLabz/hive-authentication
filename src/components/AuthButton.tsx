@@ -18,6 +18,7 @@ export const AuthButton: React.FC<
   loginButtonTextColor,
   web2Config,
   onWeb2Authenticate,
+  hiveSignerVisible = false,
   theme = "light", // Default to "light" theme
 }) => {
   const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
@@ -144,6 +145,7 @@ export const AuthButton: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        hiveSignerVisible={hiveSignerVisible}
       />
 
       <SwitchUserModal
@@ -162,6 +164,7 @@ export const AuthButton: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        hiveSignerVisible={hiveSignerVisible}
       />
     </>
   );

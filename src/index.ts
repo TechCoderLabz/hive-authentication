@@ -7,6 +7,7 @@ export { Wallet } from './components/Wallet';
 export { TransactionHistory } from './components/TransactionHistory';
 export { VideoFeed } from './components/video/VideoFeed';
 export { BottomToolbarWithSlider } from './components/BottomToolbarWithSlider';
+export { HiveSignerCallback } from './components/HiveSignerCallback';
 
 // Store and hooks
 export { useAuthStore } from './store/authStore';

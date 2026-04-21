@@ -108,7 +108,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://hreplier-api.sagarkothari88.one/login",
+        "https://hreplier-api.sagarkothari88.one/login",
         {
           method: "POST",
           headers: {
@@ -243,6 +243,7 @@ function App() {
                   // loginButtonTextColor="white"
                   web2Config={web2Config}
                   onWeb2Authenticate={handleWeb2Authenticate}
+                  hiveSignerVisible={true}
                 />
               </div>
               <div className="card-actions justify-center mt-4">

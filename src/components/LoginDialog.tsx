@@ -32,6 +32,7 @@ export const LoginDialog: React.FC<
   loginButtonTextColor,
   web2Config,
   onWeb2Authenticate,
+  hiveSignerVisible = false,
 }) => {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -482,36 +483,38 @@ export const LoginDialog: React.FC<
                   </label>
                 </div>
 
-                <div className="form-control">
-                  <label
-                    className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
-                      loginMethod === "hivesigner"
-                        ? hasCustomLoginColors
-                          ? "border-none"
-                          : "bg-primary text-primary-content"
-                        : theme === "dark"
-                        ? "border border-base-300 hover:bg-gray-700 hover:text-white"
-                        : "border border-gray-300 hover:bg-gray-200 hover:text-black"
-                    }`}
-                    style={
-                      loginMethod === "hivesigner" && hasCustomLoginColors
-                        ? loginButtonStyle
-                        : undefined
-                    }
-                  >
-                    <input
-                      type="radio"
-                      name="loginMethod"
-                      className="hidden"
-                      checked={loginMethod === 'hivesigner'}
-                      onChange={() => setLoginMethod('hivesigner')}
-                      disabled={isLoading}
-                    />
-                    <span className="label-text">
-                      <img src={HiveSignerIcon} alt="HiveSigner" className='w-10 h-10' />
-                    </span>
-                  </label>
-                </div>
+                {hiveSignerVisible && (
+                  <div className="form-control">
+                    <label
+                      className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
+                        loginMethod === "hivesigner"
+                          ? hasCustomLoginColors
+                            ? "border-none"
+                            : "bg-primary text-primary-content"
+                          : theme === "dark"
+                          ? "border border-base-300 hover:bg-gray-700 hover:text-white"
+                          : "border border-gray-300 hover:bg-gray-200 hover:text-black"
+                      }`}
+                      style={
+                        loginMethod === "hivesigner" && hasCustomLoginColors
+                          ? loginButtonStyle
+                          : undefined
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="loginMethod"
+                        className="hidden"
+                        checked={loginMethod === 'hivesigner'}
+                        onChange={() => setLoginMethod('hivesigner')}
+                        disabled={isLoading}
+                      />
+                      <span className="label-text">
+                        <img src={HiveSignerIcon} alt="HiveSigner" className='w-10 h-10' />
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 <div className="form-control">
                   <label

@@ -5,6 +5,7 @@ import type { LoggedInUser, SwitchUserModalProps } from '../types/auth';
 import { AuthService } from '../services/authService';
 import KeychainIcon from '../assets/keychain.svg'
 import HiveAuthIcon from '../assets/hiveauth-light.svg'
+import HiveSignerIcon from '../assets/hivesigner.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
 import Web2Icon from '../assets/web2.svg'
 
@@ -23,6 +24,7 @@ export const SwitchUserModal: React.FC<
   loginButtonTextColor,
   web2Config,
   onWeb2Authenticate,
+  hiveSignerVisible = false,
 }) => {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const { currentUser, loggedInUsers, setCurrentUser, removeLoggedInUser, clearAllUsers } = useAuthStore();
@@ -85,6 +87,8 @@ export const SwitchUserModal: React.FC<
         return KeychainIcon;
       case 'hiveauth':
         return HiveAuthIcon;
+      case 'hivesigner':
+        return HiveSignerIcon;
       case 'privatePostingKey':
         return PrivateKeyIcon;
     }
@@ -99,6 +103,8 @@ export const SwitchUserModal: React.FC<
         return 'Keychain';
       case 'hiveauth':
         return 'HiveAuth';
+      case 'hivesigner':
+        return 'HiveSigner';
       case 'privatePostingKey':
         return 'PrivateKey';
     }
@@ -162,6 +168,7 @@ export const SwitchUserModal: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        hiveSignerVisible={hiveSignerVisible}
       />
     );
   }
@@ -221,10 +228,8 @@ export const SwitchUserModal: React.FC<
                   />
                 </div>
               </div>
-              <div className='avatar'>
-                <div className='w-10 h-10 rounded-full'>
-                  <img src={getProviderIcon(user)} alt={`${getProviderName(user)}`} />
-                </div>
+              <div className='flex-shrink-0 flex items-center justify-center w-10 h-10'>
+                <img src={getProviderIcon(user)} alt={`${getProviderName(user)}`} className="w-8 h-8 object-contain" />
               </div>
 
               {/* Username */}
