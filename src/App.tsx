@@ -1,27 +1,29 @@
 import { useEffect, useState } from "react";
 import { AuthButton } from "./components/AuthButton";
 import { useAuthStore } from "./store/authStore";
-import type { HiveAuthResult, LoggedInUser, Web2AuthResult } from "./types/auth";
-import { initAioha, KeyTypes } from '@aioha/aioha'
-import { AiohaProvider } from '@aioha/react-ui'
+import type {
+  HiveAuthResult,
+  LoggedInUser,
+  Web2AuthResult,
+} from "./types/auth";
+import { initAioha, KeyTypes } from "@aioha/aioha";
+import { AiohaProvider } from "@aioha/react-ui";
 import { useProgrammaticAuth } from "./hooks/useProgrammaticAuth";
 import type { Operation } from "@hiveio/dhive";
 import { ReportModal } from "./components/ReportModal";
 import { Wallet } from "./components/Wallet";
 
-const aioha = initAioha(
-  {
-    hivesigner: {
-      app: 'thehivemobileapp',
-      callbackURL: window.location.origin + '/#/hivesignerlogin',
-      scope: ['login', 'vote']
-    },
-    hiveauth: {
-      name: 'Hive Authentication Demo',
-      description: 'A demo app for testing Hive authentication'
-    }
-  }
-)
+const aioha = initAioha({
+  hivesigner: {
+    app: "thehivemobileapp",
+    callbackURL: window.location.origin + "/#/hivesignerlogin",
+    scope: ["login", "vote"],
+  },
+  hiveauth: {
+    name: "Hive Authentication Demo",
+    description: "A demo app for testing Hive authentication",
+  },
+});
 
 const web2Config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -34,9 +36,13 @@ const web2Config = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-
 function App() {
-  const { currentUser, loggedInUsers, switchToActiveForCurrentUser, switchToPostingForCurrentUser } = useAuthStore();
+  const {
+    currentUser,
+    loggedInUsers,
+    switchToActiveForCurrentUser,
+    switchToPostingForCurrentUser,
+  } = useAuthStore();
   const { loginWithPrivateKey, logout } = useProgrammaticAuth(aioha);
   const [theme, setTheme] = useState<"light" | "dark">("light"); // Add theme state
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -78,7 +84,7 @@ function App() {
   }, [theme]);
 
   const handleWeb2Authenticate = async (
-    web2Result: Web2AuthResult
+    web2Result: Web2AuthResult,
   ): Promise<string> => {
     console.log("Web2 authentication result:", web2Result);
     console.log("Firebase ID Token:", web2Result.idToken);
@@ -96,26 +102,31 @@ function App() {
   };
 
   const handleAuthenticate = async (
-    hiveResult: HiveAuthResult
+    hiveResult: HiveAuthResult,
   ): Promise<string> => {
     // console.log("Hive authentication result:", hiveResult);
 
     try {
-      const response = await fetch("https://hreplier-api.sagarkothari88.one/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "http://hreplier-api.sagarkothari88.one/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            challenge: hiveResult.challenge,
+            username: hiveResult.username,
+            pubkey: hiveResult.publicKey,
+            proof: hiveResult.proof,
+          }),
         },
-        body: JSON.stringify({
-          challenge: hiveResult.challenge,
-          username: hiveResult.username,
-          pubkey: hiveResult.publicKey,
-          proof: hiveResult.proof,
-        }),
-      });
+      );
 
       if (!response.ok) {
-        throw new Error(`Server authentication failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Server authentication failed: ${response.status} ${response.statusText}`,
+        );
       }
 
       const data = await response.json();
@@ -130,11 +141,15 @@ function App() {
   };
 
   const handleProgrammaticLogin = async () => {
-    const userInfo = await loginWithPrivateKey(user, key, async (hiveResult) => {
-      console.log("Hive result:", hiveResult);
-      // TODO: Add server validation
-      return JSON.stringify({ message: "Server validation successful" });
-    });
+    const userInfo = await loginWithPrivateKey(
+      user,
+      key,
+      async (hiveResult) => {
+        console.log("Hive result:", hiveResult);
+        // TODO: Add server validation
+        return JSON.stringify({ message: "Server validation successful" });
+      },
+    );
     console.log("User logged in:", userInfo);
   };
 
@@ -149,9 +164,20 @@ function App() {
 
   const handlePayButtonClick = async () => {
     try {
-      const parsedHiveOp: Operation = ["transfer", { "from": "shaktimaaan", "to": "i-am-the-flash", "amount": "0.001 HBD", "memo": "trying from hive authentication" }];
+      const parsedHiveOp: Operation = [
+        "transfer",
+        {
+          from: "shaktimaaan",
+          to: "i-am-the-flash",
+          amount: "0.001 HBD",
+          memo: "trying from hive authentication",
+        },
+      ];
       await switchToActiveForCurrentUser();
-      const result = await aioha.signAndBroadcastTx([parsedHiveOp], KeyTypes.Active);
+      const result = await aioha.signAndBroadcastTx(
+        [parsedHiveOp],
+        KeyTypes.Active,
+      );
       console.log("Result:", JSON.stringify(result, null, 2));
       await switchToPostingForCurrentUser();
     } catch (error) {
@@ -162,8 +188,9 @@ function App() {
   return (
     <AiohaProvider aioha={aioha}>
       <div
-        className={`min-h-screen ${theme === "dark" ? "bg-gray-800 text-white" : "bg-base-200 text-black"
-          } p-8`}
+        className={`min-h-screen ${
+          theme === "dark" ? "bg-gray-800 text-white" : "bg-base-200 text-black"
+        } p-8`}
       >
         <div className="max-w-4xl mx-auto">
           {/* Theme Toggle */}
@@ -178,17 +205,21 @@ function App() {
 
           {/* Auth Section */}
           <div
-            className={`card ${theme === "dark" ? "bg-gray-900" : "bg-base-100"
-              } shadow-xl mb-8`}
+            className={`card ${
+              theme === "dark" ? "bg-gray-900" : "bg-base-100"
+            } shadow-xl mb-8`}
           >
             <div className="card-body">
               <h2 className="card-title text-2xl">Hive Authentication Demo</h2>
               <p className="text-base-content/70">
-                This is a demo of the Hive Authentication package with a working API integration.
+                This is a demo of the Hive Authentication package with a working
+                API integration.
               </p>
               <div className="card-actions justify-center mt-4">
                 <AuthButton
-                  encryptionKey={import.meta.env.VITE_LOCAL_KEY ?? 'test-encryption-key'}
+                  encryptionKey={
+                    import.meta.env.VITE_LOCAL_KEY ?? "test-encryption-key"
+                  }
                   onAuthenticate={handleAuthenticate}
                   aioha={aioha}
                   onClose={() => {
@@ -196,7 +227,15 @@ function App() {
                   }}
                   isActiveFieldVisible={true}
                   onSignMessage={(username) => {
-                    return `${new Date().toISOString()}:${username}`;
+                    const objectForAuth = {
+                      signed_message: {
+                        type: "login",
+                        app: "thehivemobileapp",
+                      },
+                      authors: [username],
+                      timestamp: new Date().toISOString(),
+                    };
+                    return JSON.stringify(objectForAuth);
                   }}
                   theme={theme} // Pass theme to AuthButton
                   // Example: custom login button color / gradient
@@ -207,10 +246,20 @@ function App() {
                 />
               </div>
               <div className="card-actions justify-center mt-4">
-                <button onClick={handleProgrammaticLogin} className="btn btn-primary">Programmatic Login</button>
+                <button
+                  onClick={handleProgrammaticLogin}
+                  className="btn btn-primary"
+                >
+                  Programmatic Login
+                </button>
               </div>
               <div className="card-actions justify-center mt-4">
-                <button onClick={handleProgrammaticLogout} className="btn btn-secondary">Programmatic Logout</button>
+                <button
+                  onClick={handleProgrammaticLogout}
+                  className="btn btn-secondary"
+                >
+                  Programmatic Logout
+                </button>
               </div>
             </div>
           </div>
@@ -218,7 +267,9 @@ function App() {
           {currentUser && (
             <div className="card bg-green-50 border border-green-200 mb-6">
               <div className="card-body">
-                <h3 className="card-title text-green-800">Currently Logged In</h3>
+                <h3 className="card-title text-green-800">
+                  Currently Logged In
+                </h3>
                 <div className="space-y-2 text-green-700">
                   <p>
                     <strong>Username:</strong> {currentUser.username}
@@ -227,10 +278,12 @@ function App() {
                     <strong>Provider:</strong> {currentUser.provider}
                   </p>
                   <p>
-                    <strong>Public Key:</strong> {currentUser.publicKey.substring(0, 20)}...
+                    <strong>Public Key:</strong>{" "}
+                    {currentUser.publicKey.substring(0, 20)}...
                   </p>
                   <p>
-                    <strong>Server Response:</strong> {currentUser.serverResponse.substring(0, 20)}...
+                    <strong>Server Response:</strong>{" "}
+                    {currentUser.serverResponse.substring(0, 20)}...
                   </p>
                 </div>
               </div>
@@ -245,12 +298,17 @@ function App() {
                 </h3>
                 <div className="space-y-2">
                   {loggedInUsers.map((user: LoggedInUser) => (
-                    <div key={user.username} className="text-blue-700 flex items-center gap-2">
+                    <div
+                      key={user.username}
+                      className="text-blue-700 flex items-center gap-2"
+                    >
                       <span>•</span>
                       <span>{user.username}</span>
                       <span className="text-blue-500">({user.provider})</span>
                       {currentUser?.username === user.username && (
-                        <span className="badge badge-primary badge-sm">Current</span>
+                        <span className="badge badge-primary badge-sm">
+                          Current
+                        </span>
                       )}
                     </div>
                   ))}
@@ -276,13 +334,10 @@ function App() {
               </button>
             </div>
           )}
-
         </div>
 
         {/* Wallet Section */}
-        {currentUser && (
-          <Wallet username={currentUser.username} />
-        )}
+        {currentUser && <Wallet username={currentUser.username} />}
 
         <ReportModal
           isOpen={isReportModalOpen}
