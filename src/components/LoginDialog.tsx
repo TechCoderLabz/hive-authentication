@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { Providers } from '@aioha/aioha';
 import KeychainIcon from '../assets/keychain.svg'
 import HiveAuthIcon from '../assets/hiveauth-light.svg'
+import HiveSignerIcon from '../assets/hivesigner.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
 import Web2Icon from '../assets/web2.svg'
 import { Web2LoginDialog } from './Web2LoginDialog'
@@ -38,7 +39,7 @@ export const LoginDialog: React.FC<
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
-  const [loginMethod, setLoginMethod] = useState<'keychain' | 'hiveauth' | 'privateKey'>('keychain');
+  const [loginMethod, setLoginMethod] = useState<'keychain' | 'hiveauth' | 'hivesigner' | 'privateKey'>('keychain');
   const [privateKey, setPrivateKey] = useState('');
   const [privateActiveKey, setPrivateActiveKey] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -179,6 +180,9 @@ export const LoginDialog: React.FC<
           break;
         case 'hiveauth':
           hiveResult = await AuthService.loginWithHiveAuth(aioha, username.trim(), proof);
+          break;
+        case 'hivesigner':
+          hiveResult = await AuthService.loginWithHiveSigner(aioha, username.trim(), proof);
           break;
         case 'privateKey':
           hiveResult = await AuthService.loginWithPrivatePostingKey(
@@ -474,6 +478,37 @@ export const LoginDialog: React.FC<
                     />
                     <span className="label-text">
                       <img src={HiveAuthIcon} alt="HiveAuth" className='w-10 h-10' />
+                    </span>
+                  </label>
+                </div>
+
+                <div className="form-control">
+                  <label
+                    className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
+                      loginMethod === "hivesigner"
+                        ? hasCustomLoginColors
+                          ? "border-none"
+                          : "bg-primary text-primary-content"
+                        : theme === "dark"
+                        ? "border border-base-300 hover:bg-gray-700 hover:text-white"
+                        : "border border-gray-300 hover:bg-gray-200 hover:text-black"
+                    }`}
+                    style={
+                      loginMethod === "hivesigner" && hasCustomLoginColors
+                        ? loginButtonStyle
+                        : undefined
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name="loginMethod"
+                      className="hidden"
+                      checked={loginMethod === 'hivesigner'}
+                      onChange={() => setLoginMethod('hivesigner')}
+                      disabled={isLoading}
+                    />
+                    <span className="label-text">
+                      <img src={HiveSignerIcon} alt="HiveSigner" className='w-10 h-10' />
                     </span>
                   </label>
                 </div>

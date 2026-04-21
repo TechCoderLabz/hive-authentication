@@ -12,8 +12,8 @@ import { Wallet } from "./components/Wallet";
 const aioha = initAioha(
   {
     hivesigner: {
-      app: 'hive-auth-demo.app',
-      callbackURL: window.location.origin + '/hivesigner.html',
+      app: 'thehivemobileapp',
+      callbackURL: window.location.origin + '/#/hivesignerlogin',
       scope: ['login', 'vote']
     },
     hiveauth: {
@@ -101,7 +101,7 @@ function App() {
     // console.log("Hive authentication result:", hiveResult);
 
     try {
-      const response = await fetch("https://beta-api.distriator.com/login", {
+      const response = await fetch("https://hreplier-api.sagarkothari88.one/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

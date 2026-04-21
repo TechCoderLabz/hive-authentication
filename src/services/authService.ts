@@ -60,6 +60,32 @@ export class AuthService {
     }
   }
 
+  static async loginWithHiveSigner(aioha: Aioha, username: string, proof: string): Promise<HiveAuthResult> {
+    try {
+      const timestamp = proof;
+
+      const result = await aioha.login(Providers.HiveSigner, username, {
+        msg: timestamp,
+        keyType: KeyTypes.Posting
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'HiveSigner authentication failed');
+      }
+
+      return {
+        provider: 'hivesigner',
+        challenge: result.result,
+        publicKey: result.publicKey || '',
+        username: result.username || username,
+        proof: timestamp
+      };
+    } catch (error) {
+      console.error('HiveSigner authentication error:', error);
+      throw new Error('Failed to authenticate with HiveSigner');
+    }
+  }
+
   static async loginWithPrivatePostingKey(
     aioha: Aioha,
     username: string,
