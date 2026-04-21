@@ -159,6 +159,8 @@ When users choose "Private Key" login, they enter a **Posting Key** (required). 
 3. **Wallet Integration**: Users can scan the QR code with their HiveAuth wallet app to approve the login
 4. **Automatic Handling**: The package handles the entire flow from login request to authentication completion
 
+**HiveSigner Support**: HiveSigner is supported as an opt-in provider. Pass `hiveSignerVisible` to `AuthButton` and mount the exported `HiveSignerCallback` at the route you configured as `hivesigner.callbackURL`. See the dedicated **HiveSigner Integration** section below for the full setup.
+
 ## How It Works
 
 1. **User clicks login** → Package shows login modal
@@ -193,6 +195,85 @@ When a user chooses HiveAuth login:
 - **30-Second Timer**: Countdown timer with automatic expiry
 - **Cancel Option**: User can manually cancel QR code display
 - **Seamless UX**: Smooth transition between login form and QR code display
+
+## HiveSigner Integration
+
+HiveSigner is an OAuth-style provider: the user is redirected to `hivesigner.com` to approve your app, then bounced back to a callback URL in your app. Because of that redirect step, enabling it needs a little more wiring than the other providers.
+
+### 1. Configure Aioha
+
+Pass a `hivesigner` block to `initAioha`. The `callbackURL` must be a route **inside your app** — this is where HiveSigner will send the user back with the access token.
+
+```ts
+import { initAioha } from '@aioha/aioha'
+
+export const aioha = initAioha({
+  hivesigner: {
+    app: 'your-app-name',                                           // registered on hivesigner.com
+    callbackURL: window.location.origin + '/#/hivesignerlogin',     // must match a route you mount below
+    scope: ['login', 'vote'],
+  },
+  hiveauth: {
+    name: 'My App',
+    description: 'My App description',
+  },
+})
+```
+
+Notes:
+- `scope` — minimum `['login']`. Add broadcast scopes (e.g. `'vote'`, `'comment'`, `'transfer'`) only if your app needs them.
+- The `#/hivesignerlogin` form is for hash-router apps. If you use `BrowserRouter`, drop the `#/` and use `/hivesignerlogin`.
+- Register your `app` name and the exact `callbackURL` on [hivesigner.com](https://hivesigner.com/) before testing.
+
+### 2. Mount the callback route
+
+The package exports a ready-made `HiveSignerCallback` component that processes the token and closes/redirects the window. Mount it at the same path you passed as `callbackURL`.
+
+```tsx
+// main.tsx (hash router example — matches `#/hivesignerlogin`)
+import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HiveSignerCallback } from 'hive-authentication'
+import App from './App'
+
+createRoot(document.getElementById('root')!).render(
+  <HashRouter>
+    <Routes>
+      <Route path="/" element={<App />} />
+      <Route path="/hivesignerlogin" element={<HiveSignerCallback />} />
+    </Routes>
+  </HashRouter>,
+)
+```
+
+For `BrowserRouter`, swap `HashRouter` for `BrowserRouter` and use `path="/hivesignerlogin"` — and remember to match `callbackURL` above.
+
+### 3. Enable the UI option
+
+HiveSigner is **hidden by default**. Opt in by passing `hiveSignerVisible` to `AuthButton`:
+
+```tsx
+<AuthButton
+  encryptionKey={...}
+  onAuthenticate={handleAuthenticate}
+  aioha={aioha}
+  onSignMessage={(u) => `${new Date().toISOString()}:${u}`}
+  hiveSignerVisible      // ← show HiveSigner alongside Keychain / HiveAuth / Private Key
+/>
+```
+
+### How the flow runs
+
+1. User picks HiveSigner in the login dialog and enters their username.
+2. Aioha redirects them to `hivesigner.com` to approve your app + requested scopes.
+3. HiveSigner redirects back to your `callbackURL`, which is handled by `HiveSignerCallback`.
+4. `HiveSignerCallback` normalizes the URL, completes the handshake via `@aioha/aioha`, and closes the popup / returns control to your app.
+5. The package calls your `onAuthenticate` callback with the resulting `HiveAuthResult` (`provider: 'hivesigner'`), just like any other provider.
+
+### Troubleshooting
+
+- **Stuck on "Completing login, closing window..."** — the mounted route doesn't match `callbackURL`. Compare the path in `initAioha` against your router config.
+- **"Invalid callbackURL"** from HiveSigner — register the exact URL (including `#/`) for your app at [hivesigner.com](https://hivesigner.com/).
+- **Icon not showing in the modal** — make sure you're on a version that exports `HiveSignerCallback` and have passed `hiveSignerVisible`.
 
 ## Programmatic Authentication
 
@@ -353,14 +434,26 @@ The main authentication button.
 **Props:**
 ```tsx
 interface AuthButtonProps {
-  encryptionKey: string;   // Required: encryption key for local storage (e.g. from your env/config)
+  /** Required: encryption key for local storage (e.g. from your env/config). */
+  encryptionKey: string;
+  /** Required: called after Hive auth to run your server verification. Must return a JSON string. */
   onAuthenticate: (hiveResult: HiveAuthResult) => Promise<string>;
+  /** Required: initialised Aioha instance from `@aioha/aioha`. */
   aioha: Aioha;
-  theme?: "light" | "dark";           // default: "light"
-  shouldShowSwitchUser?: boolean;   // default: true
-  isActiveFieldVisible?: boolean;   // default: false — when true, shows optional Active Key field in private key login
-  onClose?: () => void;
+  /** Required: returns the message string to sign for the given username (e.g. a timestamp). */
   onSignMessage: (username: string) => string;
+
+  /** Visual theme. Default: "light". */
+  theme?: "light" | "dark";
+  /** When false, the modal only shows the logged-in user with a logout button. Default: true. */
+  shouldShowSwitchUser?: boolean;
+  /** When true, shows an optional Active Key field in the Private Key login form. Default: false. */
+  isActiveFieldVisible?: boolean;
+  /** When true, shows HiveSigner as a login option. Default: false. */
+  hiveSignerVisible?: boolean;
+  /** Called when the login / switch-user dialog closes. */
+  onClose?: () => void;
+
   /**
    * Optional colors for the Login button.
    * - Single color: ['#ff0000']
@@ -369,12 +462,31 @@ interface AuthButtonProps {
   loginButtonColors?: string[];
   /** Optional color for the "Login" text when the user is not logged in. */
   loginButtonTextColor?: string;
+
   /** Optional Firebase config for Web2 login (Google & Email). If omitted, Web2 button is hidden. */
   web2Config?: Web2Config;
-  /** Optional callback for Web2 authentication result. Required when web2Config is provided. */
+  /** Optional callback for Web2 authentication result. Required when `web2Config` is provided. */
   onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
 }
 ```
+
+**Field reference**
+
+| Prop | Required | Default | Description |
+| --- | --- | --- | --- |
+| `encryptionKey` | yes | — | Symmetric key used to encrypt persisted session data in `localStorage`. Typically sourced from an env var (e.g. `VITE_APP_ENCRYPTION_KEY`). |
+| `onAuthenticate` | yes | — | Server-side verification callback invoked after a successful Hive login. Receives the `HiveAuthResult` and must return a JSON string that your app can later read from `currentUser.serverResponse`. Throw to abort the login. |
+| `aioha` | yes | — | Shared Aioha instance. Must be created with both `hivesigner` and `hiveauth` config (see the init snippet at the top). |
+| `onSignMessage` | yes | — | Returns the plain-text message to be signed for a given username — typically an ISO timestamp. Called whenever a challenge needs to be produced (login, switch user, active-key upgrade). |
+| `theme` | no | `"light"` | `"light"` or `"dark"`. |
+| `shouldShowSwitchUser` | no | `true` | When `false`, the dialog only shows the active user and a logout button (no multi-account switching). |
+| `isActiveFieldVisible` | no | `false` | Adds an optional Active Key input to the Private Key login form. If filled in, the key is validated and stored in `privateActiveKey`. |
+| `hiveSignerVisible` | no | `false` | Reveals the HiveSigner login option. See **HiveSigner Integration** below — requires a callback route and `hivesigner.callbackURL` in the Aioha init. |
+| `onClose` | no | — | Fires when either the login or switch-user modal closes. |
+| `loginButtonColors` | no | — | Solid color (single entry) or gradient (multi-entry) for the Login / Add Account buttons. |
+| `loginButtonTextColor` | no | — | Overrides the Login button text color. |
+| `web2Config` | no | — | Firebase config enabling Google / Email login. Omit to hide the Web2 button entirely. |
+| `onWeb2Authenticate` | no | — | Required iff `web2Config` is supplied. Same contract as `onAuthenticate` but receives a `Web2AuthResult`. |
 
 **Usage:**
 ```tsx
@@ -384,6 +496,8 @@ interface AuthButtonProps {
   aioha={aioha}
   shouldShowSwitchUser={true}
   isActiveFieldVisible={false}
+  // Opt-in: show the HiveSigner login option (requires callback route, see below)
+  hiveSignerVisible={true}
   onSignMessage={(username) => `${new Date().toISOString()}:${username}`}
   // Solid color example
   // loginButtonColors={["#ef4444"]}
@@ -413,7 +527,7 @@ const { currentUser, loggedInUsers, isLoading, error } = useAuthStore();
 
 ```tsx
 interface HiveAuthResult {
-  provider: string;           // 'keychain' | 'hiveauth' | 'privatePostingKey'
+  provider: string;           // 'keychain' | 'hiveauth' | 'hivesigner' | 'privatePostingKey'
   challenge: string;          // Hive signature
   publicKey: string;          // User's public key
   username: string;           // Hive username
