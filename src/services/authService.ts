@@ -4,6 +4,26 @@ import { PlaintextKeyProvider } from '@aioha/aioha/build/providers/custom/plaint
 import * as dhive from "@hiveio/dhive";
 const client = new dhive.Client(["https://api.hive.blog"]);
 
+/**
+ * Accepts either a WIF private key or a Hive master password and returns
+ * the derived private key + its WIF representation. If the input parses as
+ * a WIF, it is used as-is; otherwise it is treated as the master password
+ * and the key for the given role is derived via `PrivateKey.fromLogin`.
+ */
+const resolvePrivateKey = (
+  input: string,
+  username: string,
+  role: 'posting' | 'active'
+): { keyObj: dhive.PrivateKey; wif: string } => {
+  try {
+    const keyObj = dhive.PrivateKey.fromString(input);
+    return { keyObj, wif: input };
+  } catch {
+    const keyObj = dhive.PrivateKey.fromLogin(username, input, role);
+    return { keyObj, wif: keyObj.toString() };
+  }
+};
+
 export class AuthService {
 
   static async loginWithHiveKeychain(aioha: Aioha, username: string, proof: string): Promise<HiveAuthResult> {
@@ -95,8 +115,13 @@ export class AuthService {
   ): Promise<HiveAuthResult> {
 
     try {
-      // Validate posting key against on-chain posting authority
-      const postingKeyObj = dhive.PrivateKey.fromString(privatePostingKey);
+      // Accept either a WIF posting key or the account's master password
+      // (in which case the posting key is derived).
+      const { keyObj: postingKeyObj, wif: resolvedPostingKey } = resolvePrivateKey(
+        privatePostingKey.trim(),
+        username,
+        'posting'
+      );
       const postingPublicKey = postingKeyObj.createPublic().toString();
 
       const account = await client.database.getAccounts([username]);
@@ -111,11 +136,16 @@ export class AuthService {
         throw new Error("Posting key mismatch");
       }
 
-      // If an active key is provided, validate it against on-chain active authority (optional)
-      let trimmedActiveKey: string | undefined;
+      // If an active key (or master password) is provided, validate against
+      // on-chain active authority (optional).
+      let resolvedActiveKey: string | undefined;
       if (privateActiveKey && privateActiveKey.trim()) {
-        trimmedActiveKey = privateActiveKey.trim();
-        const activeKeyObj = dhive.PrivateKey.fromString(trimmedActiveKey);
+        const { keyObj: activeKeyObj, wif } = resolvePrivateKey(
+          privateActiveKey.trim(),
+          username,
+          'active'
+        );
+        resolvedActiveKey = wif;
         const activePublicKey = activeKeyObj.createPublic().toString();
 
         const activeKeys = account[0].active.key_auths.map(
@@ -126,7 +156,7 @@ export class AuthService {
         }
       }
 
-      const plaintextProvider = new PlaintextKeyProvider(privatePostingKey);
+      const plaintextProvider = new PlaintextKeyProvider(resolvedPostingKey);
       aioha.registerCustomProvider(plaintextProvider);
       // Create timestamp for proof
       const timestamp = proof;
@@ -146,8 +176,8 @@ export class AuthService {
         publicKey: result.publicKey || '', // Handle optional publicKey
         username: username,
         proof: timestamp,
-        privatePostingKey: privatePostingKey,
-        ...(trimmedActiveKey && { privateActiveKey: trimmedActiveKey })
+        privatePostingKey: resolvedPostingKey,
+        ...(resolvedActiveKey && { privateActiveKey: resolvedActiveKey })
       };
     } catch (error) {
       console.error('Hive authentication error:', error);
