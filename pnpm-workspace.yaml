@@ -1,0 +1,12 @@
+allowBuilds:
+  '@firebase/util': true
+  core-js: true
+  esbuild: true
+  protobufjs: true
+  secp256k1: true
+onlyBuiltDependencies:
+  - '@firebase/util'
+  - core-js
+  - esbuild
+  - protobufjs
+  - secp256k1

@@ -2,7 +2,13 @@
 import { create } from "zustand";
 import type { WalletStore, WalletData, Transaction } from "../types/wallet";
 import * as dhive from "@hiveio/dhive";
-const dhiveClient = new dhive.Client(["https://api.hive.blog"]);
+import { getHiveAuthApiNode, subscribeHiveAuthApiNode } from "../config/hiveApi";
+
+// Single dhive Client whose `address` is patched in place when the
+// host app calls `setHiveAuthApiNode(...)` — so wallet reads always
+// go to whichever node the host has configured.
+const dhiveClient = new dhive.Client([getHiveAuthApiNode()]);
+subscribeHiveAuthApiNode((url) => { dhiveClient.address = [url]; });
 
 // ------------------- Wallet Helpers -------------------
 const getWalletDataDetail = async (username: string) => {
@@ -53,7 +59,7 @@ const fetchAccountHistory = async (
   username: string,
   limit: number = 100
 ): Promise<Transaction[]> => {
-  const response = await fetch("https://api.hive.blog/", {
+  const response = await fetch(getHiveAuthApiNode() + "/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

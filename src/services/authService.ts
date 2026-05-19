@@ -1,8 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Aioha, KeyTypes, Providers } from '@aioha/aioha';
 import type { HiveAuthResult } from '../types/auth';
 import { PlaintextKeyProvider } from '@aioha/aioha/build/providers/custom/plaintext.js'
 import * as dhive from "@hiveio/dhive";
-const client = new dhive.Client(["https://api.hive.blog"]);
+import { getHiveAuthApiNode, subscribeHiveAuthApiNode } from '../config/hiveApi';
+
+// Same shared dhive Client model as walletStore / apiService — address
+// follows whatever node the host app configured.
+const client = new dhive.Client([getHiveAuthApiNode()]);
+subscribeHiveAuthApiNode((url) => { client.address = [url]; });
 
 /**
  * Accepts either a WIF private key or a Hive master password and returns

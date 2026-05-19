@@ -11,14 +11,21 @@ const server = {
   graphQLServerUrl: 'https://union.us-02.infra.3speak.tv',
 };
 import { Client } from '@hiveio/dhive';
+import { getHiveAuthApiNode, subscribeHiveAuthApiNode } from '../config/hiveApi';
 
-
-// Use dev proxy paths to avoid CORS in development. Vite proxy maps these to real RPC nodes.
+// Primary node is whatever the host app configured via
+// `setHiveAuthApiNode(...)`; the two extras serve as in-process
+// failover so an unreachable primary doesn't take a feed query down
+// before the host's wider failover kicks in. The address array is
+// patched in place when the host swaps nodes so live calls follow.
 const dhiveClient = new Client([
-  "https://api.hive.blog",
+  getHiveAuthApiNode(),
   'https://api.syncad.com',
-  "https://api.deathwing.me"
+  'https://api.deathwing.me',
 ]);
+subscribeHiveAuthApiNode((url) => {
+  dhiveClient.address = [url, 'https://api.syncad.com', 'https://api.deathwing.me'];
+});
 
 class ApiService {
 

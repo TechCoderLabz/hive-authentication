@@ -4,8 +4,13 @@ import { PlaintextKeyProvider } from '@aioha/aioha/build/providers/custom/plaint
 import * as dhive from "@hiveio/dhive";
 import { useAuthStore } from '../store/authStore';
 import type { HiveAuthResult, LoggedInUser } from '../types/auth';
+import { getHiveAuthApiNode, subscribeHiveAuthApiNode } from '../config/hiveApi';
 
-const client = new dhive.Client(["https://api.hive.blog"]);
+// Account-lookup client. Address tracks the host-configured node so
+// the very first call after a deep-link login (where the host might
+// have just rotated nodes) still goes to a reachable endpoint.
+const client = new dhive.Client([getHiveAuthApiNode()]);
+subscribeHiveAuthApiNode((url) => { client.address = [url]; });
 
 /**
  * Programmatic authentication service for developers
@@ -75,9 +80,22 @@ export class ProgrammaticAuth {
         throw new Error("Private posting key does not match the account's posting authority");
       }
 
-      // Set up the custom provider
+      // Set up the custom provider. PlaintextKeyProvider's constructor
+      // creates its own dhive Client with `DEFAULT_API` (techcoderx.com)
+      // baked in. We immediately call `aioha.setApi(...)` below so that
+      // node is overwritten with the host-configured one before the
+      // first broadcast goes out — otherwise votes / comments hit
+      // techcoderx.com and the browser CORS-blocks them.
       const plaintextProvider = new PlaintextKeyProvider(privatePostingKey);
       this.aioha.registerCustomProvider(plaintextProvider);
+
+      // Push the host's chosen node into Aioha (and through to every
+      // registered provider including the one just added). Safe to
+      // call without explicit fallbacks — aioha keeps its existing
+      // fallback list when only the primary changes.
+      try {
+        this.aioha.setApi(getHiveAuthApiNode());
+      } catch { /* ignore — fall through to login regardless */ }
 
       // Create timestamp for proof
       const timestamp = new Date().toISOString();

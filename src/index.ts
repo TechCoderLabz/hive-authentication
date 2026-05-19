@@ -18,6 +18,16 @@ export { ReportModal } from './components/ReportModal';
 export { AuthService } from './services/authService';
 export { ProgrammaticAuth } from './services/programmaticAuth';
 
+// Hive API node configuration — let the host app (e.g. HiveSuite) push
+// its user-selected node into the package so every internal dhive
+// Client and the Aioha-level setApi propagation use it instead of the
+// hard-coded default (api.hive.blog / Aioha's techcoderx.com).
+export {
+  getHiveAuthApiNode,
+  setHiveAuthApiNode,
+  subscribeHiveAuthApiNode,
+} from './config/hiveApi';
+
 // Types
 export type {
   HiveAuthResult,
