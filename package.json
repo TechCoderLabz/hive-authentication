@@ -1,6 +1,6 @@
 {
   "name": "hive-authentication",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -30,7 +30,7 @@
     "crypto-js": "^4.2.0",
     "daisyui": "^5.1.6",
     "date-fns": "^4.1.0",
-    "firebase": "^11.0.0",
+    "firebase": "^12.12.1",
     "lucide-react": "^0.542.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.1",

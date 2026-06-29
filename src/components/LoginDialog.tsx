@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { AuthService } from '../services/authService';
@@ -8,9 +11,9 @@ import KeychainIcon from '../assets/keychain.svg'
 import HiveAuthIcon from '../assets/hiveauth-light.svg'
 import HiveSignerIcon from '../assets/hivesigner.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
-import Web2Icon from '../assets/web2.svg'
 import { Web2LoginDialog } from './Web2LoginDialog'
 import type { Web2Config, Web2AuthResult } from '../types/auth'
+import { FirebaseAuthService } from '../services/firebaseAuthService'
 
 export const LoginDialog: React.FC<
   LoginDialogProps & {
@@ -46,8 +49,30 @@ export const LoginDialog: React.FC<
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isKeychainEnabled, setIsKeychainEnabled] = useState(false);
   const [showWeb2Login, setShowWeb2Login] = useState(false);
+  const [preAuthGoogleUser, setPreAuthGoogleUser] = useState<any>(null);
+  const [initialStep, setInitialStep] = useState<'initial' | 'email'>('initial');
 
   const hasWeb2Config = !!web2Config && !!onWeb2Authenticate;
+
+  const handleGoogleClick = async () => {
+    if (!web2Config) return;
+    setError(null);
+    try {
+      const result = await FirebaseAuthService.loginWithGoogle(web2Config);
+      setPreAuthGoogleUser(result);
+      setInitialStep('initial');
+      setShowWeb2Login(true);
+    } catch (e: any) {
+      console.error('Google login error in LoginDialog:', e);
+      setError(e.message || 'Google login failed');
+    }
+  };
+
+  const handleEmailClick = () => {
+    setPreAuthGoogleUser(null);
+    setInitialStep('email');
+    setShowWeb2Login(true);
+  };
 
   const { isLoading, authenticateWithCallback, hiveAuthPayload, setHiveAuthPayload, currentUser } = useAuthStore();
 
@@ -242,24 +267,27 @@ export const LoginDialog: React.FC<
 
   return (
     <div
-      className={`modal modal-open ${
-        theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-black"
-      }`}
+      className="modal modal-open bg-black/50 cursor-pointer"
+      onClick={onClose}
     >
       <div
-        className={`modal-box absolute ${
+        className={`modal-box absolute px-8 pt-8 pb-10 cursor-default ${
           theme === "dark" ? "bg-gray-900" : "bg-white"
         }`}
+        style={{ width: "384px", maxWidth: "90vw" }}
+        onClick={(e) => e.stopPropagation()}
       >
         {!showWeb2Login && (
           <div className="flex items-center justify-between mb-4">
-            {showBackButton && (
+            {showBackButton ? (
               <button
                 className="btn btn-sm btn-circle btn-ghost"
                 onClick={onBack}
               >
                 ←
               </button>
+            ) : (
+              <div className="w-8 h-8" />
             )}
 
             <h3
@@ -370,9 +398,9 @@ export const LoginDialog: React.FC<
             {/* Private Key Input Fields - Only show when private key method is selected */}
             {loginMethod === 'privateKey' && (
               <>
-                <div className="form-control w-full mt-4">
-                  <label className="label">
-                    <span className="label-text">Posting Key</span>
+                 <div className="form-control w-full mt-5">
+                   <label className="label">
+                     <span className="label-text">Posting Key</span>
                   </label>
                   <input
                     type="password"
@@ -389,9 +417,9 @@ export const LoginDialog: React.FC<
                   />
                 </div>
                 {isActiveFieldVisible && (
-                  <div className="form-control w-full mt-4">
-                    <label className="label">
-                      <span className="label-text">Active Key</span>
+                   <div className="form-control w-full mt-5">
+                     <label className="label">
+                       <span className="label-text">Active Key</span>
                       <span className="label-text-alt text-gray-500">(optional)</span>
                     </label>
                     <input
@@ -411,9 +439,9 @@ export const LoginDialog: React.FC<
                 )}
               </>
             )}
-            <div className="mt-4">
-              <p
-                className="text-sm text-gray-600 mb-3 text-center"
+             <div className="mt-6">
+               <p
+                 className="text-sm text-gray-500 mb-4 text-center"
                 style={loginButtonTextColor ? { color: loginButtonTextColor } : undefined}
               >
                 Choose your login method:
@@ -546,31 +574,13 @@ export const LoginDialog: React.FC<
                     </span>
                   </label>
                 </div>
-
-                {/* Web2 Login Option */}
-                {hasWeb2Config && (
-                  <div className="form-control">
-                    <label
-                      className={`label cursor-pointer rounded-lg px-4 py-2 transition-colors ${
-                        theme === "dark"
-                          ? "border border-base-300 hover:bg-gray-700 hover:text-white"
-                          : "border border-gray-300 hover:bg-gray-200 hover:text-black"
-                      }`}
-                      onClick={() => setShowWeb2Login(true)}
-                    >
-                      <span className="label-text">
-                        <img src={Web2Icon} alt="Web2 Login" className='w-10 h-10' />
-                      </span>
-                    </label>
-                  </div>
-                )}
               </div>
 
 
 
               {/* Login Button */}
-              <button
-                className={`btn w-full mt-4 ${
+               <button
+                 className={`btn w-full mt-6 ${
                   hasCustomLoginColors
                     ? `border-none focus:outline-none focus:ring-0 ${
                         theme === "dark" ? "text-white" : "text-black"
@@ -579,7 +589,11 @@ export const LoginDialog: React.FC<
                     ? "bg-primary text-white hover:bg-primary-focus border-none"
                     : "bg-blue-500 text-black hover:bg-blue-600 border-none"
                 }`}
-                style={loginButtonStyle}
+                style={
+                  (isLoading || !username.trim() || (loginMethod === 'privateKey' && !privateKey.trim()))
+                    ? { ...loginButtonStyle, opacity: 0.5, cursor: 'not-allowed' }
+                    : loginButtonStyle
+                }
                 onClick={() => {
                   handleLogin(onSignMessage(username.trim().toLocaleLowerCase()));
                 }}
@@ -610,16 +624,67 @@ export const LoginDialog: React.FC<
                   </span>
                 )}
               </button>
+
+              {/* Web2 Divider and Button */}
+              {hasWeb2Config && (
+                <>
+                  <div className="flex items-center my-6">
+                    <div className="flex-1 border-t border-gray-300 dark:border-gray-700"></div>
+                    <span className="px-3 text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500">OR</span>
+                    <div className="flex-1 border-t border-gray-300 dark:border-gray-700"></div>
+                  </div>
+                  <div className="flex flex-col gap-3 w-full pb-2">
+                    <button
+                      className={`btn w-full flex items-center justify-center gap-2 ${
+                        theme === 'dark'
+                          ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
+                          : 'bg-white hover:bg-gray-100 text-black border border-gray-300'
+                      }`}
+                      onClick={handleGoogleClick}
+                      disabled={isLoading}
+                      type="button"
+                    >
+                      <svg className="w-5 h-5 inline-block" viewBox="0 0 24 24">
+                        <path
+                          fill="currentColor"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        />
+                      </svg>
+                      <span>Sign in with Google</span>
+                    </button>
+                    <button
+                      className="text-xs text-gray-500 hover:text-gray-300 dark:text-gray-400 dark:hover:text-white mt-2 cursor-pointer transition-colors bg-transparent border-none hover:underline focus:outline-none w-full text-center"
+                      onClick={handleEmailClick}
+                      disabled={isLoading}
+                      type="button"
+                    >
+                      Or sign in with Email
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
 
         {error && !showWeb2Login && (
-          <div className="alert alert-error mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <div className="mt-4 p-3 rounded-lg bg-red-950/50 border border-red-500/50 text-red-200 text-xs flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{error}</span>
+            <span className="flex-1 break-words text-left">{error}</span>
           </div>
         )}
 
@@ -628,12 +693,17 @@ export const LoginDialog: React.FC<
             isOpen={true}
             embedded={true}
             onClose={onClose}
-            onBack={() => setShowWeb2Login(false)}
+            onBack={() => {
+              setShowWeb2Login(false);
+              setPreAuthGoogleUser(null);
+            }}
             web2Config={web2Config!}
             onWeb2Authenticate={onWeb2Authenticate!}
             theme={theme}
             loginButtonColors={loginButtonColors}
             loginButtonTextColor={loginButtonTextColor}
+            preAuthGoogleUser={preAuthGoogleUser}
+            initialStep={initialStep}
           />
         )}
       </div>

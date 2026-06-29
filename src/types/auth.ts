@@ -121,6 +121,8 @@ export interface Web2AuthResult {
   displayName: string | null;
   photoURL: string | null;
   idToken: string;
+  hiveUsername?: string;
+  privatePostingKey?: string;
 }
 
 export interface AuthButtonProps {

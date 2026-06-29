@@ -86,8 +86,10 @@ export const AuthButton: React.FC<
     <>
       {currentUser ? (
         <div
-          className={`flex flex-col items-center ${
-            theme === "dark" ? "text-gray-300" : "text-gray-700"
+          className={`flex flex-row items-center cursor-pointer p-2 px-3 rounded-full transition-all gap-2 ${
+            theme === "dark"
+              ? "bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/80 text-gray-200"
+              : "bg-gray-100 border border-gray-200 hover:bg-gray-200 text-gray-800"
           }`}
           onClick={handleButtonClick}
           id="user-button"
@@ -104,17 +106,13 @@ export const AuthButton: React.FC<
               />
             </div>
           </div>
-          <div
-            className={`text-sm ${
-              theme === "dark" ? "text-gray-300" : "text-gray-800"
-            }`}
-          >
+          <div className="text-xs font-semibold">
             {getDisplayName()}
           </div>
         </div>
       ) : (
         <button
-          className={`btn ${
+          className={`btn px-6 py-2 ${
             hasCustomLoginColors
               ? `border-none focus:outline-none focus:ring-0 ${
                   theme === "dark" ? "text-white" : "text-black"

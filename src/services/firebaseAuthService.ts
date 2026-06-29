@@ -12,7 +12,7 @@ import type { Web2Config, Web2AuthResult } from '../types/auth';
 let firebaseApp: FirebaseApp | null = null;
 let firebaseAuth: Auth | null = null;
 
-function getFirebaseApp(config: Web2Config): FirebaseApp {
+export function getFirebaseApp(config: Web2Config): FirebaseApp {
   if (firebaseApp) return firebaseApp;
   const existingApps = getApps();
   if (existingApps.length > 0) {

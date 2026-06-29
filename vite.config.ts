@@ -28,7 +28,15 @@ export default defineConfig({
       formats: ['es']
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        /^zustand(\/.+)?$/,
+        'lucide-react',
+        /^firebase(\/.*)?$/,
+        /^@aioha(\/.*)?$/
+      ],
       output: {
         globals: {
           react: 'React',

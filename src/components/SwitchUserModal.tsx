@@ -175,19 +175,21 @@ export const SwitchUserModal: React.FC<
 
   return (
     <div
-      className={`modal modal-open ${
-        theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-black"
-      }`}
+      className="modal modal-open bg-black/50 cursor-pointer"
+      onClick={onClose}
     >
       <div
-        className={`modal-box absolute ${
+        className={`modal-box absolute px-8 pt-8 pb-10 cursor-default ${
           theme === "dark" ? "bg-gray-900" : "bg-white"
         }`}
+        style={{ width: "384px", maxWidth: "90vw" }}
+        onClick={(e) => e.stopPropagation()}
       >
 
         <div className="flex items-center justify-between mb-4">
+          <div className="w-8 h-8" />
           {/* Title */}
-          <h3 className="font-bold text-lg text-center">
+          <h3 className="font-bold text-lg text-center flex-1">
             {shouldShowSwitchUser ? "Switch User" : "Logged in User"}
           </h3>
           {/* Cross Button */}
@@ -276,7 +278,7 @@ export const SwitchUserModal: React.FC<
         </div>
 
         {/* Bottom Actions */}
-        <div className="modal-action flex-col gap-2">
+        <div className="modal-action flex flex-col gap-3 mt-6">
           {
             shouldShowSwitchUser &&
             <button
@@ -296,11 +298,7 @@ export const SwitchUserModal: React.FC<
 
 
           <button
-            className={`btn ${
-              theme === "dark"
-                ? "btn-outline btn-error text-white"
-                : "btn-outline btn-error text-black"
-            } w-full`}
+            className="btn bg-transparent border border-red-500/80 text-red-500 hover:bg-red-500/10 hover:border-red-500 w-full transition-colors"
             onClick={handleLogoutAll}
           >
             {shouldShowSwitchUser ? "Logout All" : "Logout"}

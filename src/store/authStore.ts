@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from 'zustand/react';
 import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
 import { STORAGE_KEYS } from '../constants/storage';
