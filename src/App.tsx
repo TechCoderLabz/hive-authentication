@@ -15,9 +15,9 @@ import { Wallet } from "./components/Wallet";
 
 const aioha = initAioha({
   hivesigner: {
-    app: "thehivemobileapp",
+    app: "hivesuite.app",
     callbackURL: window.location.origin + "/#/hivesignerlogin",
-    scope: ["login", "vote"],
+    scope: ['login', 'vote', 'comment', 'comment_options', 'custom_json', 'delete_comment'],
   },
   hiveauth: {
     name: "Hive Authentication Demo",
@@ -108,7 +108,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "https://hreplier-api.sagarkothari88.one/login",
+        "https://api.hivesuite.app/login",
         {
           method: "POST",
           headers: {
