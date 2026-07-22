@@ -191,6 +191,60 @@ export class AuthService {
     }
   }
 
+  static async loginWithPeakLock(
+    aioha: Aioha,
+    username: string,
+    privatePostingKey: string,
+    proof: string
+  ): Promise<HiveAuthResult> {
+    try {
+      const { keyObj: postingKeyObj, wif: resolvedPostingKey } = resolvePrivateKey(
+        privatePostingKey.trim(),
+        username,
+        'posting'
+      );
+      const postingPublicKey = postingKeyObj.createPublic().toString();
+
+      const account = await client.database.getAccounts([username]);
+      if (account.length === 0) {
+        throw new Error(`Account ${username} not found.`);
+      }
+
+      const postingKeys = account[0].posting.key_auths.map(
+        (item: any) => item[0]
+      );
+      if (!postingKeys.includes(postingPublicKey)) {
+        throw new Error("Posting key mismatch");
+      }
+
+      const plaintextProvider = new PlaintextKeyProvider(resolvedPostingKey);
+      aioha.registerCustomProvider(plaintextProvider);
+      const timestamp = proof;
+
+      const result = await aioha.login(Providers.Custom, username, {
+        msg: timestamp,
+        keyType: KeyTypes.Posting
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'PeakLock authentication failed');
+      }
+
+      return {
+        provider: 'peaklock',
+        challenge: result.result,
+        publicKey: result.publicKey || postingPublicKey,
+        username: username,
+        proof: timestamp,
+        privatePostingKey: resolvedPostingKey,
+      };
+    } catch (error) {
+      console.error('PeakLock authentication error:', error);
+      throw error instanceof Error ? error : new Error('Failed to authenticate with PeakLock');
+    }
+  }
+
+
   static async switchUserWithPrivatePostingKey(aioha: Aioha, username: string, privatePostingKey: string, proof: string): Promise<HiveAuthResult> {
 
     try {

@@ -8,6 +8,7 @@ import HiveAuthIcon from '../assets/hiveauth-light.svg'
 import HiveSignerIcon from '../assets/hivesigner.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
 import Web2Icon from '../assets/web2.svg'
+import PeakLockIcon from '../assets/peaklock.svg'
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & { theme?: "light" | "dark" }
@@ -91,6 +92,8 @@ export const SwitchUserModal: React.FC<
         return HiveSignerIcon;
       case 'privatePostingKey':
         return PrivateKeyIcon;
+      case 'peaklock':
+        return PeakLockIcon;
     }
   };
 
@@ -107,8 +110,11 @@ export const SwitchUserModal: React.FC<
         return 'HiveSigner';
       case 'privatePostingKey':
         return 'PrivateKey';
+      case 'peaklock':
+        return 'PeakLock';
     }
   };
+
 
   const getUserAvatar = (user: LoggedInUser) => {
     if (user.loginType === 'web2') {

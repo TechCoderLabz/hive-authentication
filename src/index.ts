@@ -18,6 +18,16 @@ export { ReportModal } from './components/ReportModal';
 export { AuthService } from './services/authService';
 export { ProgrammaticAuth } from './services/programmaticAuth';
 
+// PeakLock Storage Utilities
+export {
+  getPeakLockAccounts,
+  savePeakLockAccount,
+  decryptPeakLockKey,
+  removePeakLockAccount,
+  type PeakLockAccount,
+} from './utils/peakLockStorage';
+
+
 // Hive API node configuration — let the host app (e.g. HiveSuite) push
 // its user-selected node into the package so every internal dhive
 // Client and the Aioha-level setApi propagation use it instead of the
