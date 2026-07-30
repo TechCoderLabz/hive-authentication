@@ -81,6 +81,8 @@ export interface SwitchUserModalProps {
   web2Config?: Web2Config;
   /** Optional callback for Web2 authentication result. */
   onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
+  /** Feature flag to enable or disable Web2 login UI. Default: false */
+  enableWeb2Login?: boolean;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }
@@ -97,8 +99,10 @@ export interface LoginDialogProps {
   isActiveFieldVisible?: boolean;
   /** Optional colors for the Login button. */
   loginButtonColors?: string[];
-  /** Optional color for the \"Login\" text. */
+  /** Optional color for the "Login" text. */
   loginButtonTextColor?: string;
+  /** Feature flag to enable or disable Web2 login UI. Default: false */
+  enableWeb2Login?: boolean;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }
@@ -145,6 +149,8 @@ export interface AuthButtonProps {
   web2Config?: Web2Config;
   /** Optional callback for Web2 authentication result. Required if web2Config is provided. */
   onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
+  /** Feature flag to enable or disable Web2 login UI. Default: false */
+  enableWeb2Login?: boolean;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }

@@ -25,6 +25,7 @@ export const SwitchUserModal: React.FC<
   loginButtonTextColor,
   web2Config,
   onWeb2Authenticate,
+  enableWeb2Login = false,
   hiveSignerVisible = false,
 }) => {
   const [showAddAccount, setShowAddAccount] = useState(false);
@@ -174,6 +175,7 @@ export const SwitchUserModal: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        enableWeb2Login={enableWeb2Login}
         hiveSignerVisible={hiveSignerVisible}
       />
     );
@@ -181,77 +183,67 @@ export const SwitchUserModal: React.FC<
 
   return (
     <div
-      className={`modal modal-open ${
-        theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-black"
-      }`}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
+      onClick={onClose}
     >
       <div
-        className={`modal-box absolute ${
-          theme === "dark" ? "bg-gray-900" : "bg-white"
-        }`}
+        className="relative w-full max-w-md bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden flex flex-col p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
       >
-
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
           {/* Title */}
-          <h3 className="font-bold text-lg text-center">
-            {shouldShowSwitchUser ? "Switch User" : "Logged in User"}
-          </h3>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            <h3 className="font-bold text-lg text-white">
+              {shouldShowSwitchUser ? 'Switch User' : 'Logged in User'}
+            </h3>
+          </div>
           {/* Cross Button */}
           <button
-            className={`btn btn-sm btn-circle btn-ghost ${
-              theme === "dark"
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 border border-gray-300 text-black"
-            }`}
+            className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors border border-zinc-800"
             onClick={onClose}
           >
             ✕
           </button>
         </div>
 
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
           {loggedInUsers.map((user) => (
             <div
               key={user.username}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all duration-200 ${
                 currentUser?.username === user.username
-                  ? 'border-primary bg-primary/10' 
-                  : 'border-base-300 hover:border-primary/50'
+                  ? 'border-red-500/80 bg-red-500/10 shadow-[0_0_15px_rgba(227,19,55,0.15)]'
+                  : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700'
               }`}
               onClick={() => handleSwitchUser(user)}
             >
               {/* Avatar */}
-              <div className="avatar">
-                <div className="w-10 h-10 rounded-full">
-                  <img
-                    src={getUserAvatar(user)}
-                    alt={`${getUserDisplayName(user)} avatar`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = user.loginType === 'web2'
+              <div className="relative shrink-0">
+                <img
+                  src={getUserAvatar(user)}
+                  alt={`${getUserDisplayName(user)} avatar`}
+                  className="w-10 h-10 rounded-full border border-zinc-700 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      user.loginType === 'web2'
                         ? 'https://www.gravatar.com/avatar/?d=mp'
                         : 'https://images.hive.blog/u/0/avatar';
-                    }}
-                  />
-                </div>
-              </div>
-              <div className='flex-shrink-0 flex items-center justify-center w-10 h-10'>
-                <img src={getProviderIcon(user)} alt={`${getProviderName(user)}`} className="w-8 h-8 object-contain" />
+                  }}
+                />
+                <img
+                  src={getProviderIcon(user)}
+                  alt={`${getProviderName(user)}`}
+                  className="w-4 h-4 absolute -bottom-0.5 -right-0.5 bg-zinc-950 rounded-full p-0.5 border border-zinc-700"
+                />
               </div>
 
               {/* Username */}
               <div className="flex-1 min-w-0">
-                <p
-                  className={`font-medium truncate ${
-                    theme === "dark" ? "text-white" : "text-black"
-                  }`}
-                >
+                <p className="font-semibold text-sm text-zinc-100 truncate">
                   {getUserDisplayName(user)}
                 </p>
-                <p
-                  className={`text-sm capitalize ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
+                <p className="text-xs text-zinc-400 capitalize">
                   {getProviderName(user)}
                 </p>
               </div>
@@ -260,14 +252,14 @@ export const SwitchUserModal: React.FC<
               <div className="flex items-center gap-2">
                 {currentUser?.username === user.username ? (
                   <span
-                    className="badge badge-primary badge-sm"
+                    className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-600 text-white"
                     style={currentBadgeStyle}
                   >
                     Current
                   </span>
                 ) : (
                   <button
-                    className="btn btn-xs btn-outline btn-error"
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium border border-red-500/40 text-red-400 hover:bg-red-500/20 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleLogoutUser(user);
@@ -282,39 +274,25 @@ export const SwitchUserModal: React.FC<
         </div>
 
         {/* Bottom Actions */}
-        <div className="modal-action flex-col gap-2">
-          {
-            shouldShowSwitchUser &&
+        <div className="pt-2 space-y-2">
+          {shouldShowSwitchUser && (
             <button
-              className={`btn w-full ${
-                hasCustomLoginColors
-                  ? "border-none focus:outline-none focus:ring-0"
-                  : theme === "dark"
-                  ? "bg-primary text-white hover:bg-primary-focus"
-                  : "bg-blue-500 text-white hover:bg-blue-600"
-              }`}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg"
               style={addAccountButtonStyle}
               onClick={handleAddAccount}
             >
-              Add Account
+              + Add Account
             </button>
-          }
-
+          )}
 
           <button
-            className={`btn ${
-              theme === "dark"
-                ? "btn-outline btn-error text-white"
-                : "btn-outline btn-error text-black"
-            } w-full`}
+            className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs transition-all duration-200 border border-zinc-800 hover:border-red-900/60 bg-zinc-900/40 hover:bg-red-950/30 text-zinc-400 hover:text-red-300"
             onClick={handleLogoutAll}
           >
-            {shouldShowSwitchUser ? "Logout All" : "Logout"}
+            {shouldShowSwitchUser ? 'Logout All' : 'Logout'}
           </button>
         </div>
       </div>
-      {/* Backdrop */}
-      <div className="modal-backdrop" onClick={onClose}></div>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import CryptoJS from "crypto-js";
 import { useAuthStore } from "../store/authStore";
 import { LoginDialog } from "./LoginDialog";
 import { SwitchUserModal } from "./SwitchUserModal";
@@ -18,6 +19,7 @@ export const AuthButton: React.FC<
   loginButtonTextColor,
   web2Config,
   onWeb2Authenticate,
+  enableWeb2Login = false,
   hiveSignerVisible = false,
   theme = "light", // Default to "light" theme
 }) => {
@@ -50,11 +52,12 @@ export const AuthButton: React.FC<
     if (currentUser?.loginType === 'web2') {
       // Use Google photo or Gravatar for email users
       if (currentUser.photoURL) return currentUser.photoURL;
-      // Gravatar fallback using email
+      // Gravatar fallback using email MD5 hash
       if (currentUser.email) {
-        return `https://www.gravatar.com/avatar/?d=mp`;
+        const hash = CryptoJS.MD5(currentUser.email.trim().toLowerCase()).toString();
+        return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
       }
-      return 'https://www.gravatar.com/avatar/?d=mp';
+      return 'https://www.gravatar.com/avatar/?d=identicon';
     }
     return `https://images.hive.blog/u/${currentUser?.username}/avatar`;
   };
@@ -145,6 +148,7 @@ export const AuthButton: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        enableWeb2Login={enableWeb2Login}
         hiveSignerVisible={hiveSignerVisible}
       />
 
@@ -164,6 +168,7 @@ export const AuthButton: React.FC<
         loginButtonTextColor={loginButtonTextColor}
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
+        enableWeb2Login={enableWeb2Login}
         hiveSignerVisible={hiveSignerVisible}
       />
     </>
