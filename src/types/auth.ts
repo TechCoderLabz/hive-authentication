@@ -26,7 +26,7 @@ export interface LoggedInUser {
   privateActiveKey?: string; // Optional active key (private key login only)
   // Web2 fields (populated when logged in via Google/Email)
   loginType?: 'hive' | 'web2';
-  web2Provider?: 'google' | 'email';
+  web2Provider?: 'google' | 'apple' | 'email';
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
@@ -119,7 +119,7 @@ export interface Web2Config {
 }
 
 export interface Web2AuthResult {
-  provider: 'google' | 'email';
+  provider: 'google' | 'apple' | 'email';
   uid: string;
   email: string | null;
   displayName: string | null;

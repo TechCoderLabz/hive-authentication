@@ -20,15 +20,6 @@ import {
   type PeakLockAccount,
 } from '../utils/peakLockStorage';
 
-function createHumanChallenge() {
-  const first = Math.floor(Math.random() * 8) + 2; // 2-9
-  const second = Math.floor(Math.random() * 8) + 2; // 2-9
-  return {
-    question: `${first} + ${second}`,
-    answer: String(first + second),
-  };
-}
-
 export const LoginDialog: React.FC<
   LoginDialogProps & {
     theme?: 'light' | 'dark';
@@ -53,13 +44,7 @@ export const LoginDialog: React.FC<
   hiveSignerVisible = false,
 }) => {
   // Web2 state
-  const [web2Mode, setWeb2Mode] = useState<'none' | 'email'>('none');
-  const [web2Email, setWeb2Email] = useState('');
-  const [web2Password, setWeb2Password] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [humanChallenge, setHumanChallenge] = useState(createHumanChallenge);
-  const [humanAnswer, setHumanAnswer] = useState('');
-  const [web2Loading, setWeb2Loading] = useState<'google' | 'signin' | 'signup' | null>(null);
+  const [web2Loading, setWeb2Loading] = useState<'google' | 'apple' | null>(null);
 
   // Web3 state
   const [selectedWeb3Method, setSelectedWeb3Method] = useState<
@@ -85,10 +70,13 @@ export const LoginDialog: React.FC<
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
   const [isKeychainEnabled, setIsKeychainEnabled] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'web2' | 'web3'>('web3');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hasWeb2Config = enableWeb2Login === true && !!web2Config && !!onWeb2Authenticate;
+
+  // Top-level navigation: choice screen -> web2 (Google/Apple) or web3 (Hive methods)
+  const [mainView, setMainView] = useState<'choice' | 'web2' | 'web3'>(hasWeb2Config ? 'choice' : 'web3');
+
   const { isLoading, authenticateWithCallback, authenticateWeb2WithCallback, hiveAuthPayload, setHiveAuthPayload, currentUser } =
     useAuthStore();
 
@@ -172,10 +160,10 @@ export const LoginDialog: React.FC<
     if (!isOpen) {
       setError(null);
       setShowQRCode(false);
-      setWeb2Mode('none');
       setSelectedWeb3Method('none');
+      setMainView(hasWeb2Config ? 'choice' : 'web3');
     }
-  }, [isOpen]);
+  }, [isOpen, hasWeb2Config]);
 
   // Web2 Authentication Handlers
   const handleGoogleLogin = async () => {
@@ -193,34 +181,16 @@ export const LoginDialog: React.FC<
     }
   };
 
-  const verifyHumanChallenge = () => {
-    if (humanAnswer.trim() !== humanChallenge.answer) {
-      setError('Human verification failed. Please solve the calculation correctly.');
-      setHumanAnswer('');
-      setHumanChallenge(createHumanChallenge());
-      return false;
-    }
-    return true;
-  };
-
-  const handleEmailAuth = async () => {
+  const handleAppleLogin = async () => {
     if (!web2Config || !onWeb2Authenticate) return;
-    if (!web2Email.trim() || !web2Password.trim()) {
-      setError('Please enter both email and password');
-      return;
-    }
-    if (!verifyHumanChallenge()) return;
-
     setError(null);
-    setWeb2Loading(isSignUp ? 'signup' : 'signin');
+    setWeb2Loading('apple');
     try {
-      const result = isSignUp
-        ? await FirebaseAuthService.signUpWithEmail(web2Config, web2Email.trim(), web2Password)
-        : await FirebaseAuthService.signInWithEmail(web2Config, web2Email.trim(), web2Password);
+      const result = await FirebaseAuthService.loginWithApple(web2Config);
       await authenticateWeb2WithCallback(result, onWeb2Authenticate);
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Email authentication failed');
+      setError(err?.message || 'Apple login failed');
     } finally {
       setWeb2Loading(null);
     }
@@ -378,9 +348,7 @@ export const LoginDialog: React.FC<
       onClick={onClose}
     >
       <div
-        className={`relative w-full ${
-          hasWeb2Config ? 'max-w-4xl' : 'max-w-lg'
-        } bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300`}
+        className="relative w-full max-w-md bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -412,57 +380,68 @@ export const LoginDialog: React.FC<
           </button>
         </div>
 
-        {/* Mobile Tab Switcher */}
-        {hasWeb2Config && (
-          <div className="flex md:hidden border-b border-zinc-800 bg-zinc-900/30">
-            <button
-              className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-                mobileTab === 'web2'
-                  ? 'border-red-500 text-white bg-zinc-800/40'
-                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
-              }`}
-              onClick={() => setMobileTab('web2')}
-            >
-              🌐 Web2 Social Login
-            </button>
-            <button
-              className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-all ${
-                mobileTab === 'web3'
-                  ? 'border-red-500 text-white bg-zinc-800/40'
-                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
-              }`}
-              onClick={() => setMobileTab('web3')}
-            >
-              🐝 Web3 Hive Login
-            </button>
-          </div>
-        )}
-
         {/* Modal Body */}
-        <div
-          className={`flex-1 overflow-y-auto p-6 ${
-            hasWeb2Config ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col'
-          } relative`}
-        >
-          {/* Divider for Desktop */}
-          {hasWeb2Config && (
-            <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 z-10">
-              <div className="w-[1px] h-24 bg-gradient-to-b from-transparent via-zinc-700 to-transparent"></div>
-              <span className="px-2.5 py-1 text-xs font-bold bg-zinc-900 border border-zinc-700 rounded-full text-zinc-400">
-                OR
-              </span>
-              <div className="w-[1px] h-24 bg-gradient-to-b from-transparent via-zinc-700 to-transparent"></div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* CHOICE SCREEN: pick Web2 or Web3 */}
+          {mainView === 'choice' && (
+            <div className="space-y-4">
+              <div className="text-center mb-2">
+                <h4 className="font-bold text-base text-zinc-100">How would you like to sign in?</h4>
+                <p className="text-xs text-zinc-400">Choose a login method to continue</p>
+              </div>
+
+              {hasWeb2Config && (
+                <button
+                  className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200"
+                  onClick={() => {
+                    setError(null);
+                    setMainView('web2');
+                  }}
+                >
+                  <span className="text-2xl">🌐</span>
+                  <div className="text-left flex-1">
+                    <div className="font-bold text-sm text-zinc-100">Web2 Quick Login</div>
+                    <div className="text-xs text-zinc-400">Continue with Google or Apple</div>
+                  </div>
+                  <span className="text-zinc-500">→</span>
+                </button>
+              )}
+
+              <button
+                className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200"
+                onClick={() => {
+                  setError(null);
+                  setMainView('web3');
+                }}
+              >
+                <span className="text-2xl">🐝</span>
+                <div className="text-left flex-1">
+                  <div className="font-bold text-sm text-zinc-100">Web3 Hive Login</div>
+                  <div className="text-xs text-zinc-400">Keychain, HiveAuth, Private Key & more</div>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
             </div>
           )}
 
-          {/* LEFT COLUMN: Web2 Options */}
-          {hasWeb2Config && (
-            <div className={`space-y-5 ${mobileTab === 'web2' ? 'block' : 'hidden md:block'}`}>
+          {/* WEB2 VIEW: Google / Apple only */}
+          {mainView === 'web2' && hasWeb2Config && (
+            <div className="space-y-5">
+              <button
+                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+                onClick={() => {
+                  setError(null);
+                  setMainView('choice');
+                }}
+              >
+                ← Back to login options
+              </button>
+
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl">🌐</span>
                 <div>
                   <h4 className="font-bold text-base text-zinc-100">Web2 Quick Login</h4>
-                  <p className="text-xs text-zinc-400">Instant access using your social or email accounts</p>
+                  <p className="text-xs text-zinc-400">Instant access using your social account</p>
                 </div>
               </div>
 
@@ -497,90 +476,39 @@ export const LoginDialog: React.FC<
                 <span>Continue with Google</span>
               </button>
 
-              {/* Email Login Mode Switch / Form */}
-              {web2Mode === 'none' ? (
-                <button
-                  className="w-full py-3.5 px-4 rounded-xl bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200"
-                  onClick={() => {
-                    setError(null);
-                    setWeb2Mode('email');
-                  }}
-                >
-                  <span>✉️</span>
-                  <span>Sign in with Email & Password</span>
-                </button>
-              ) : (
-                <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-3 relative">
-                  <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-                    <span className="font-semibold text-sm text-zinc-200">
-                      {isSignUp ? 'Create Web2 Account' : 'Email Sign In'}
-                    </span>
-                    <button
-                      className="text-xs text-zinc-400 hover:text-white"
-                      onClick={() => setWeb2Mode('none')}
-                    >
-                      ← Back
-                    </button>
-                  </div>
-
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none transition-colors"
-                    value={web2Email}
-                    onChange={(e) => setWeb2Email(e.target.value)}
-                  />
-
-                  <input
-                    type="password"
-                    placeholder="Enter password"
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none transition-colors"
-                    value={web2Password}
-                    onChange={(e) => setWeb2Password(e.target.value)}
-                  />
-
-                  {/* Math Captcha */}
-                  <div className="flex items-center gap-2 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-                    <span className="text-xs font-semibold text-zinc-400 shrink-0">
-                      Verify: {humanChallenge.question} =
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Answer"
-                      className="w-full px-2 py-1 rounded bg-zinc-900 border border-zinc-700 text-sm text-center"
-                      value={humanAnswer}
-                      onChange={(e) => setHumanAnswer(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                      onClick={handleEmailAuth}
-                      disabled={!!web2Loading}
-                    >
-                      {web2Loading === 'signin' || web2Loading === 'signup' ? (
-                        <span className="loading loading-spinner loading-xs"></span>
-                      ) : isSignUp ? (
-                        'Sign Up'
-                      ) : (
-                        'Sign In'
-                      )}
-                    </button>
-                    <button
-                      className="px-3 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
-                      onClick={() => setIsSignUp(!isSignUp)}
-                    >
-                      {isSignUp ? 'Need Sign In?' : 'Need Account?'}
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* Apple Login Button */}
+              <button
+                className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-700/80 hover:border-zinc-600 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg group"
+                onClick={handleAppleLogin}
+                disabled={!!web2Loading || isLoading}
+              >
+                {web2Loading === 'apple' ? (
+                  <span className="loading loading-spinner loading-sm text-red-500"></span>
+                ) : (
+                  <svg className="w-5 h-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16.365 1.43c0 1.14-.415 2.09-1.246 2.86-.943.86-2.03 1.35-3.02 1.28-.13-1.02.36-2.09 1.24-2.9.9-.85 2.05-1.29 3.026-1.24zM20.6 17.11c-.44 1.02-.97 1.97-1.66 2.85-.94 1.2-1.71 2.02-2.3 2.47-.9.7-1.87 1.06-2.9.08-.75-.65-1.63-1-2.66-1-.06 0-.13 0-.19.01-1.02.02-1.9.36-2.65.99-1.02.86-1.98.44-2.85-.34-.72-.65-1.6-1.62-2.62-2.9-1.1-1.4-2.02-3.03-2.72-4.9-.75-2.02-1.13-3.97-1.13-5.85 0-2.15.47-4 1.4-5.55.92-1.53 2.28-2.32 4.05-2.35.83 0 1.9.32 3.2.94.83.4 1.4.6 1.7.6.24 0 .82-.23 1.75-.7 1.32-.63 2.4-.87 3.24-.72 2.02.16 3.53 1.02 4.53 2.6-1.8 1.1-2.7 2.63-2.68 4.62.02 1.55.58 2.84 1.68 3.87.5.47 1.06.83 1.68 1.09-.13.4-.28.79-.44 1.18z"/>
+                  </svg>
+                )}
+                <span>Continue with Apple</span>
+              </button>
             </div>
           )}
 
-          {/* RIGHT COLUMN: Web3 Options */}
-          <div className={`space-y-5 ${mobileTab === 'web3' ? 'block' : 'hidden md:block'}`}>
+          {/* WEB3 VIEW: Hive login methods */}
+          {mainView === 'web3' && (
+          <div className="space-y-5">
+            {hasWeb2Config && selectedWeb3Method === 'none' && !showQRCode && (
+              <button
+                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+                onClick={() => {
+                  setError(null);
+                  setMainView('choice');
+                }}
+              >
+                ← Back to login options
+              </button>
+            )}
+
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">🐝</span>
               <div>
@@ -859,6 +787,7 @@ export const LoginDialog: React.FC<
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Global Error Banner */}

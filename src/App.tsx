@@ -244,6 +244,7 @@ function App() {
                   web2Config={web2Config}
                   onWeb2Authenticate={handleWeb2Authenticate}
                   hiveSignerVisible={true}
+                  enableWeb2Login={true}
                 />
               </div>
               <div className="card-actions justify-center mt-4">

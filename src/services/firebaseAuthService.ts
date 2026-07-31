@@ -3,6 +3,7 @@ import {
   getAuth,
   signInWithPopup,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   type Auth,
@@ -59,6 +60,32 @@ export const FirebaseAuthService = {
       if (err?.code === 'auth/unauthorized-domain' || (typeof err?.message === 'string' && err.message.toLowerCase().includes('authorized'))) {
         throw new Error(
           `Domain (${window.location.hostname}) is not authorized in Firebase Console. Please add ${window.location.hostname} to Authentication > Settings > Authorized domains in Firebase Console, or use Email Login.`
+        );
+      }
+      throw err;
+    }
+  },
+
+  async loginWithApple(config: Web2Config): Promise<Web2AuthResult> {
+    const auth = getFirebaseAuth(config);
+    const provider = new OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      return {
+        provider: 'apple',
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        idToken,
+      };
+    } catch (err: any) {
+      if (err?.code === 'auth/unauthorized-domain' || (typeof err?.message === 'string' && err.message.toLowerCase().includes('authorized'))) {
+        throw new Error(
+          `Domain (${window.location.hostname}) is not authorized in Firebase Console. Please add ${window.location.hostname} to Authentication > Settings > Authorized domains in Firebase Console.`
         );
       }
       throw err;
