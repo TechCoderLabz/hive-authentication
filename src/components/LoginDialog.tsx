@@ -12,6 +12,8 @@ import HiveAuthIcon from '../assets/hiveauth-light.svg';
 import HiveSignerIcon from '../assets/hivesigner.svg';
 import PrivateKeyIcon from '../assets/privatekey.svg';
 import PeakLockIcon from '../assets/peaklock.svg';
+import GoogleIcon from '../assets/google.svg';
+import AppleIcon from '../assets/apple.svg';
 import {
   getPeakLockAccounts,
   savePeakLockAccount,
@@ -398,7 +400,10 @@ export const LoginDialog: React.FC<
                     setMainView('web2');
                   }}
                 >
-                  <span className="text-2xl">🌐</span>
+                  <div className="flex items-center -space-x-2 shrink-0">
+                    <img src={GoogleIcon} alt="Google" className="w-7 h-7 rounded-full bg-white p-1 border-2 border-zinc-900" />
+                    <img src={AppleIcon} alt="Apple" className="w-7 h-7 rounded-full bg-black p-1 border-2 border-zinc-900" />
+                  </div>
                   <div className="text-left flex-1">
                     <div className="font-bold text-sm text-zinc-100">Web2 Quick Login</div>
                     <div className="text-xs text-zinc-400">Continue with Google or Apple</div>
@@ -414,7 +419,17 @@ export const LoginDialog: React.FC<
                   setMainView('web3');
                 }}
               >
-                <span className="text-2xl">🐝</span>
+                <div className="flex items-center -space-x-2 shrink-0">
+                  {isKeychainEnabled && (
+                    <img src={KeychainIcon} alt="Keychain" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  )}
+                  <img src={HiveAuthIcon} alt="HiveAuth" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  {hiveSignerVisible && (
+                    <img src={HiveSignerIcon} alt="HiveSigner" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  )}
+                  <img src={PrivateKeyIcon} alt="Private Key" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  <img src={PeakLockIcon} alt="PeakLock" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                </div>
                 <div className="text-left flex-1">
                   <div className="font-bold text-sm text-zinc-100">Web3 Hive Login</div>
                   <div className="text-xs text-zinc-400">Keychain, HiveAuth, Private Key & more</div>
@@ -485,8 +500,8 @@ export const LoginDialog: React.FC<
                 {web2Loading === 'apple' ? (
                   <span className="loading loading-spinner loading-sm text-red-500"></span>
                 ) : (
-                  <svg className="w-5 h-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16.365 1.43c0 1.14-.415 2.09-1.246 2.86-.943.86-2.03 1.35-3.02 1.28-.13-1.02.36-2.09 1.24-2.9.9-.85 2.05-1.29 3.026-1.24zM20.6 17.11c-.44 1.02-.97 1.97-1.66 2.85-.94 1.2-1.71 2.02-2.3 2.47-.9.7-1.87 1.06-2.9.08-.75-.65-1.63-1-2.66-1-.06 0-.13 0-.19.01-1.02.02-1.9.36-2.65.99-1.02.86-1.98.44-2.85-.34-.72-.65-1.6-1.62-2.62-2.9-1.1-1.4-2.02-3.03-2.72-4.9-.75-2.02-1.13-3.97-1.13-5.85 0-2.15.47-4 1.4-5.55.92-1.53 2.28-2.32 4.05-2.35.83 0 1.9.32 3.2.94.83.4 1.4.6 1.7.6.24 0 .82-.23 1.75-.7 1.32-.63 2.4-.87 3.24-.72 2.02.16 3.53 1.02 4.53 2.6-1.8 1.1-2.7 2.63-2.68 4.62.02 1.55.58 2.84 1.68 3.87.5.47 1.06.83 1.68 1.09-.13.4-.28.79-.44 1.18z"/>
+                  <svg className="w-5 h-5 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.689 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.817-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/>
                   </svg>
                 )}
                 <span>Continue with Apple</span>

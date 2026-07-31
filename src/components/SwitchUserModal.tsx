@@ -9,6 +9,8 @@ import HiveSignerIcon from '../assets/hivesigner.svg'
 import PrivateKeyIcon from '../assets/privatekey.svg'
 import Web2Icon from '../assets/web2.svg'
 import PeakLockIcon from '../assets/peaklock.svg'
+import GoogleIcon from '../assets/google.svg'
+import AppleIcon from '../assets/apple.svg'
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & { theme?: "light" | "dark" }
@@ -83,7 +85,16 @@ export const SwitchUserModal: React.FC<
   };
 
   const getProviderIcon = (user: LoggedInUser) => {
-    if (user.loginType === 'web2') return Web2Icon;
+    if (user.loginType === 'web2') {
+      switch (user.web2Provider) {
+        case 'google':
+          return GoogleIcon;
+        case 'apple':
+          return AppleIcon;
+        default:
+          return Web2Icon;
+      }
+    }
     switch (user.provider) {
       case 'keychain':
         return KeychainIcon;
@@ -100,7 +111,9 @@ export const SwitchUserModal: React.FC<
 
   const getProviderName = (user: LoggedInUser) => {
     if (user.loginType === 'web2') {
-      return user.web2Provider === 'google' ? 'Google' : 'Email';
+      if (user.web2Provider === 'google') return 'Google';
+      if (user.web2Provider === 'apple') return 'Apple';
+      return 'Email';
     }
     switch (user.provider) {
       case 'keychain':
