@@ -133,7 +133,12 @@ export const SwitchUserModal: React.FC<
   const getUserAvatar = (user: LoggedInUser) => {
     if (user.loginType === 'web2') {
       if (user.photoURL) return user.photoURL;
-      return 'https://www.gravatar.com/avatar/?d=mp';
+      if (user.email) {
+        const hash = CryptoJS.MD5(user.email.trim().toLowerCase()).toString();
+        return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
+      }
+      const name = user.displayName || user.email || user.username || 'Web2';
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=80`;
     }
     return `https://images.hive.blog/u/${user.username}/avatar`;
   };

@@ -1,6 +1,6 @@
 {
   "name": "hive-authentication",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
