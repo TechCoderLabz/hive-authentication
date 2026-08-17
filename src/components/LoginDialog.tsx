@@ -257,9 +257,9 @@ export const LoginDialog: React.FC<
       await authenticateWithCallback(hiveResult, onAuthenticate);
       onClose();
     } catch (err: any) {
-      if (currentUser) {
-        aioha.switchUser(currentUser.username);
-        aioha.removeOtherLogin(username.trim().toLowerCase());
+      if (currentUser && currentUser.loginType !== 'web2' && aioha) {
+        AuthService.switchUser(aioha, currentUser.username, currentUser.provider);
+        AuthService.removeUser(aioha, username.trim().toLowerCase());
       }
       setError(err?.message || 'Authentication failed. Please verify your credentials.');
     }
@@ -273,13 +273,13 @@ export const LoginDialog: React.FC<
     const cleanUsername = targetUsername.trim().toLowerCase();
     setError(null);
     try {
-      const currentLoggedInUser = aioha.getCurrentUser();
-      const otherLogins = aioha.getOtherLogins();
+      const currentLoggedInUser = aioha?.getCurrentUser?.();
+      const otherLogins = aioha?.getOtherLogins?.() || {};
       if (currentLoggedInUser === cleanUsername) {
-        aioha.logout();
-        await new Promise((res) => setTimeout(res, 500));
+        await aioha.logout();
+        await new Promise((res) => setTimeout(res, 300));
       } else if (otherLogins && otherLogins[cleanUsername]) {
-        AuthService.removeUser(aioha, cleanUsername);
+        await AuthService.removeUser(aioha, cleanUsername);
       }
 
       const proof = onSignMessage(cleanUsername);
@@ -292,9 +292,9 @@ export const LoginDialog: React.FC<
       await authenticateWithCallback(hiveResult, onAuthenticate);
       onClose();
     } catch (err: any) {
-      if (currentUser) {
-        aioha.switchUser(currentUser.username);
-        aioha.removeOtherLogin(cleanUsername);
+      if (currentUser && currentUser.loginType !== 'web2' && aioha) {
+        AuthService.switchUser(aioha, currentUser.username, currentUser.provider);
+        AuthService.removeUser(aioha, cleanUsername);
       }
       setError(err?.message || 'PeakLock authentication failed.');
     }

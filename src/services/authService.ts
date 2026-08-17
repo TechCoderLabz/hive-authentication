@@ -287,23 +287,46 @@ export class AuthService {
     }
   }
 
-  // Remove a specific user from Aioha provider
+  // Remove a specific user from Aioha provider safely
   static async removeUser(aioha: Aioha, username: string): Promise<unknown> {
+    if (!aioha || !username) return null;
+    const cleanUser = username.trim().toLowerCase();
     try {
-      const result = aioha.removeOtherLogin(username);
-      return result;
+      const otherLogins = typeof aioha.getOtherLogins === 'function' ? aioha.getOtherLogins() : {};
+      if (otherLogins && otherLogins[cleanUser]) {
+        return aioha.removeOtherLogin(cleanUser);
+      }
+      if (typeof aioha.getCurrentUser === 'function' && aioha.getCurrentUser()?.toLowerCase() === cleanUser) {
+        await aioha.logout();
+        return true;
+      }
+      return null;
     } catch (error) {
-      console.error('Remove user error:', error);
-      throw new Error(`Failed to remove user ${username}`);
+      console.warn(`Safe removeUser warning for ${cleanUser}:`, error);
+      return null;
     }
   }
 
-  static switchUser(aioha: Aioha, username: string) {
+  static switchUser(aioha: Aioha, username: string, provider?: string) {
+    if (!aioha || !username) return;
+    const cleanUser = username.trim().toLowerCase();
     try {
-      aioha.switchUser(username);
+      if (typeof aioha.getCurrentUser === 'function' && aioha.getCurrentUser()?.toLowerCase() === cleanUser) {
+        return;
+      }
+      const otherLogins = typeof aioha.getOtherLogins === 'function' ? aioha.getOtherLogins() : {};
+      if (otherLogins && otherLogins[cleanUser]) {
+        aioha.switchUser(cleanUser);
+        return;
+      }
+      // If not in otherLogins, try non-interactive login for registered provider
+      if (provider === 'keychain' && typeof aioha.loginNonInteractive === 'function') {
+        aioha.loginNonInteractive(Providers.Keychain, cleanUser, { ignorePersistence: true });
+      } else if (provider === 'hivesigner' && typeof aioha.loginNonInteractive === 'function') {
+        aioha.loginNonInteractive(Providers.HiveSigner, cleanUser, { ignorePersistence: true });
+      }
     } catch (error) {
-      console.error('Switch user error:', error);
-      throw new Error(`Failed to switch user to ${username}`);
+      console.warn(`Safe switchUser warning for ${cleanUser}:`, error);
     }
   }
 }

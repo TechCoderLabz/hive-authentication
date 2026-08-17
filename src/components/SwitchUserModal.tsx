@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
+import CryptoJS from 'crypto-js';
 import { LoginDialog } from './LoginDialog';
 import { useAuthStore } from '../store/authStore';
 import type { LoggedInUser, SwitchUserModalProps } from '../types/auth';
 import { AuthService } from '../services/authService';
-import KeychainIcon from '../assets/keychain.svg'
-import HiveAuthIcon from '../assets/hiveauth-light.svg'
-import HiveSignerIcon from '../assets/hivesigner.svg'
-import PrivateKeyIcon from '../assets/privatekey.svg'
-import Web2Icon from '../assets/web2.svg'
-import PeakLockIcon from '../assets/peaklock.svg'
-import GoogleIcon from '../assets/google.svg'
-import AppleIcon from '../assets/apple.svg'
+import KeychainIcon from '../assets/keychain.svg';
+import HiveAuthIcon from '../assets/hiveauth-light.svg';
+import HiveSignerIcon from '../assets/hivesigner.svg';
+import PrivateKeyIcon from '../assets/privatekey.svg';
+import Web2Icon from '../assets/web2.svg';
+import PeakLockIcon from '../assets/peaklock.svg';
+import GoogleIcon from '../assets/google.svg';
+import AppleIcon from '../assets/apple.svg';
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & { theme?: "light" | "dark" }
@@ -41,37 +42,54 @@ export const SwitchUserModal: React.FC<
       return;
     }
     if (user.privatePostingKey) {
-      const currentLoggedInUser = aioha.getCurrentUser();
-      const otherLogins = aioha.getOtherLogins();
-      if (currentLoggedInUser === user.username.trim()) {
-        aioha.logout();
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } else if (otherLogins && otherLogins[user.username.trim()]) {
-        AuthService.removeUser(aioha, user.username.trim());
+      try {
+        const cleanUser = user.username.trim().toLowerCase();
+        const currentLoggedInUser = aioha?.getCurrentUser?.();
+        const otherLogins = aioha?.getOtherLogins?.() || {};
+        if (currentLoggedInUser?.toLowerCase() === cleanUser) {
+          await aioha.logout();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        } else if (otherLogins && otherLogins[cleanUser]) {
+          await AuthService.removeUser(aioha, cleanUser);
+        }
+        await AuthService.switchUserWithPrivatePostingKey(
+          aioha,
+          cleanUser,
+          user.privatePostingKey,
+          onSignMessage(cleanUser)
+        );
+      } catch (err) {
+        console.warn('Error switching with private posting key:', err);
       }
-      await AuthService.switchUserWithPrivatePostingKey(aioha, user.username, user.privatePostingKey, onSignMessage(user.username.trim().toLocaleLowerCase()));
+      onClose();
+      return;
     }
-    AuthService.switchUser(aioha, user.username);
+
+    // Standard Web3 provider switch (Keychain, HiveAuth, HiveSigner, PeakLock)
+    AuthService.switchUser(aioha, user.username, user.provider);
     onClose();
   };
-  const handleLogoutUser = (user: LoggedInUser) => {
-    removeLoggedInUser(user.username);
+
+  const handleLogoutUser = async (user: LoggedInUser) => {
+    await removeLoggedInUser(user.username);
     if (user.loginType !== 'web2') {
-      AuthService.removeUser(aioha, user.username);
+      await AuthService.removeUser(aioha, user.username);
     }
   };
   const handleLogoutAll = async () => {
     try {
-      aioha.logout();
-      // Get all other logged in users
-      const otherLogins = aioha.getOtherLogins();
-      // Logout each user one by one
-      for (const user of Object.keys(otherLogins)) {
-        AuthService.removeUser(aioha, user);
+      if (aioha) {
+        await aioha.logout();
+        const otherLogins = aioha.getOtherLogins ? aioha.getOtherLogins() : {};
+        if (otherLogins) {
+          for (const user of Object.keys(otherLogins)) {
+            await AuthService.removeUser(aioha, user);
+          }
+        }
       }
       // Clear app state / storage
-      clearAllUsers();
-      // Close modal or drawer
+      await clearAllUsers();
+      // Close modal
       onClose();
     } catch (error) {
       console.error("Error logging out all users:", error);
@@ -134,8 +152,12 @@ export const SwitchUserModal: React.FC<
     if (user.loginType === 'web2') {
       if (user.photoURL) return user.photoURL;
       if (user.email) {
-        const hash = CryptoJS.MD5(user.email.trim().toLowerCase()).toString();
-        return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
+        try {
+          const hash = CryptoJS.MD5(user.email.trim().toLowerCase()).toString();
+          return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
+        } catch {
+          // fallback to UI avatar
+        }
       }
       const name = user.displayName || user.email || user.username || 'Web2';
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=80`;

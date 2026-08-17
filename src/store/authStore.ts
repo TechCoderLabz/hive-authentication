@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
 import CryptoJS from 'crypto-js';
 import type { AuthStore, LoggedInUser } from '../types/auth';
@@ -26,8 +27,47 @@ const decryptData = (encryptedData: string, key: string): unknown => {
 // Clean up old storage keys
 const cleanupOldStorage = () => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_STORAGE);
-    localStorage.removeItem(STORAGE_KEYS.LEGACY_HIVE_AUTH_ENCRYPTED);
+    safeStorageRemoveItem(STORAGE_KEYS.LEGACY_AUTH_STORAGE);
+    safeStorageRemoveItem(STORAGE_KEYS.LEGACY_HIVE_AUTH_ENCRYPTED);
+  }
+};
+
+const safeStorageSetItem = (key: string, value: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (err: any) {
+    console.warn(`LocalStorage setItem failed for key "${key}":`, err);
+    // If quota exceeded, attempt to clear transient cache keys and retry
+    if (err?.name === 'QuotaExceededError' || err?.code === 22 || err?.code === 1014) {
+      try {
+        const transientKeys = [
+          'hive-community-cache',
+          'hive-custom-snaps-pinned',
+          'hive-custom-snaps-interests',
+          'hive-drive-files',
+        ];
+        transientKeys.forEach((k) => {
+          try {
+            localStorage.removeItem(k);
+          } catch {
+            // ignore
+          }
+        });
+        localStorage.setItem(key, value);
+      } catch (retryErr) {
+        console.error(`LocalStorage quota exceeded even after eviction for key "${key}":`, retryErr);
+      }
+    }
+  }
+};
+
+const safeStorageRemoveItem = (key: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.warn(`LocalStorage removeItem failed for key "${key}":`, err);
   }
 };
 
@@ -110,9 +150,9 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       // Encrypt and store
       if (user) {
         const encryptedUser = encryptData(user, get().secretKey || '');
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, encryptedUser);
+        safeStorageSetItem(STORAGE_KEYS.CURRENT_USER, encryptedUser);
       } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+        safeStorageRemoveItem(STORAGE_KEYS.CURRENT_USER);
       }
       
       set({ currentUser: user });
@@ -120,26 +160,43 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     
     addLoggedInUser: (user) => {
       const { loggedInUsers } = get();
-      const updatedUsers = [...loggedInUsers.filter(u => u.username !== user.username), user];
+      const updatedUsers = [
+        ...loggedInUsers.filter((u) => {
+          if (u.loginType === 'web2' && user.loginType === 'web2') {
+            if (u.uid && user.uid) return u.uid !== user.uid;
+            if (u.email && user.email) return u.email.toLowerCase() !== user.email.toLowerCase();
+          }
+          return u.username.trim().toLowerCase() !== user.username.trim().toLowerCase();
+        }),
+        user,
+      ];
       
       // Encrypt and store
       const encryptedUsers = encryptData(updatedUsers, get().secretKey || '');
-      localStorage.setItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
+      safeStorageSetItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
       
       set({ loggedInUsers: updatedUsers });
     },
     
     removeLoggedInUser: async (username) => {
       const { loggedInUsers, currentUser } = get();
-      const updatedUsers = loggedInUsers.filter(u => u.username !== username);
+      const cleanUser = username.trim().toLowerCase();
+      const updatedUsers = loggedInUsers.filter((u) => {
+        if (u.uid && u.uid.toLowerCase() === cleanUser) return false;
+        return u.username.trim().toLowerCase() !== cleanUser;
+      });
       
       // Encrypt and store
       const encryptedUsers = encryptData(updatedUsers, get().secretKey || '');
-      localStorage.setItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
+      safeStorageSetItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
       
       // If removing current user, clear current user
-      if (currentUser?.username === username) {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      const isCurrent =
+        currentUser?.username?.trim().toLowerCase() === cleanUser ||
+        (currentUser?.uid && currentUser.uid.toLowerCase() === cleanUser);
+
+      if (isCurrent) {
+        safeStorageRemoveItem(STORAGE_KEYS.CURRENT_USER);
         set({ currentUser: null, loggedInUsers: updatedUsers });
       } else {
         set({ loggedInUsers: updatedUsers });
@@ -147,8 +204,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
     
     clearAllUsers: async () => {
-      localStorage.removeItem(STORAGE_KEYS.LOGGED_IN_USERS);
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      safeStorageRemoveItem(STORAGE_KEYS.LOGGED_IN_USERS);
+      safeStorageRemoveItem(STORAGE_KEYS.CURRENT_USER);
       set({ currentUser: null, loggedInUsers: [] });
     },
     
@@ -192,8 +249,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       try {
         const serverResponse = await callback(web2Result);
 
-        // Use email or displayName as the username for Web2 users
-        const username = web2Result.email || web2Result.displayName || web2Result.uid;
+        // Uniform identifier for Web2 user (uid primary)
+        const username = web2Result.uid || web2Result.email || web2Result.displayName || `web2_${Date.now()}`;
 
         const user: LoggedInUser = {
           username,
