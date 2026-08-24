@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { AuthService } from '../services/authService';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
-import type { LoginDialogProps, Web2Config, Web2AuthResult } from '../types/auth';
+import { Web3LoginDialog } from './Web3LoginDialog';
+import type { LoginDialogProps, Web2Config, Web2AuthResult, ReownConfig, Web3AuthResult } from '../types/auth';
 import QRCode from 'qrcode';
 import { Providers } from '@aioha/aioha';
 import KeychainIcon from '../assets/keychain.svg';
@@ -14,6 +15,9 @@ import PrivateKeyIcon from '../assets/privatekey.svg';
 import PeakLockIcon from '../assets/peaklock.svg';
 import GoogleIcon from '../assets/google.svg';
 import AppleIcon from '../assets/apple.svg';
+import ReownIcon from '../assets/reown.svg';
+import WalletConnectIcon from '../assets/walletconnect.svg';
+import EthereumIcon from '../assets/ethereum.svg';
 import {
   getPeakLockAccounts,
   savePeakLockAccount,
@@ -27,6 +31,10 @@ export const LoginDialog: React.FC<
     theme?: 'light' | 'dark';
     web2Config?: Web2Config;
     onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
+    reownConfig?: ReownConfig;
+    onWeb3Authenticate?: (web3Result: Web3AuthResult) => Promise<string>;
+    enableWeb3Login?: boolean;
+    onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   }
 > = ({
   isOpen,
@@ -43,13 +51,17 @@ export const LoginDialog: React.FC<
   web2Config,
   onWeb2Authenticate,
   enableWeb2Login = false,
+  reownConfig,
+  onWeb3Authenticate,
+  enableWeb3Login = true,
+  onUpdateProfile,
   hiveSignerVisible = false,
 }) => {
   // Web2 state
   const [web2Loading, setWeb2Loading] = useState<'google' | 'apple' | null>(null);
 
-  // Web3 state
-  const [selectedWeb3Method, setSelectedWeb3Method] = useState<
+  // Hive Login state
+  const [selectedHiveMethod, setSelectedHiveMethod] = useState<
     'none' | 'keychain' | 'hiveauth' | 'hivesigner' | 'privateKey' | 'peaklock'
   >('none');
   const [username, setUsername] = useState('');
@@ -75,20 +87,24 @@ export const LoginDialog: React.FC<
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hasWeb2Config = enableWeb2Login === true && !!web2Config && !!onWeb2Authenticate;
+  const hasWeb3Config = enableWeb3Login === true;
+  const hasMultipleOptions = hasWeb2Config || hasWeb3Config;
 
-  // Top-level navigation: choice screen -> web2 (Google/Apple) or web3 (Hive methods)
-  const [mainView, setMainView] = useState<'choice' | 'web2' | 'web3'>(hasWeb2Config ? 'choice' : 'web3');
+  // Top-level navigation: choice screen -> web2 (Google/Apple), hive (Hive methods), or web3 (Reown EVM)
+  const [mainView, setMainView] = useState<'choice' | 'web2' | 'hive' | 'web3'>(
+    hasMultipleOptions ? 'choice' : 'hive'
+  );
 
-  const { isLoading, authenticateWithCallback, authenticateWeb2WithCallback, hiveAuthPayload, setHiveAuthPayload, currentUser } =
+  const { isLoading, authenticateWithCallback, authenticateWeb2WithCallback, hiveAuthPayload, setHiveAuthPayload } =
     useAuthStore();
 
   useEffect(() => {
-    if (isOpen && selectedWeb3Method === 'peaklock') {
+    if (isOpen && selectedHiveMethod === 'peaklock') {
       const accs = getPeakLockAccounts();
       setPeakLockAccounts(accs);
       setPeakLockMode(accs.length === 0 ? 'add' : 'select');
     }
-  }, [isOpen, selectedWeb3Method]);
+  }, [isOpen, selectedHiveMethod]);
 
   useEffect(() => {
     if (username.trim()) {
@@ -162,10 +178,10 @@ export const LoginDialog: React.FC<
     if (!isOpen) {
       setError(null);
       setShowQRCode(false);
-      setSelectedWeb3Method('none');
-      setMainView(hasWeb2Config ? 'choice' : 'web3');
+      setSelectedHiveMethod('none');
+      setMainView(hasMultipleOptions ? 'choice' : 'hive');
     }
-  }, [isOpen, hasWeb2Config]);
+  }, [isOpen, hasMultipleOptions]);
 
   // Web2 Authentication Handlers
   const handleGoogleLogin = async () => {
@@ -198,7 +214,7 @@ export const LoginDialog: React.FC<
     }
   };
 
-  // Web3 Authentication Handlers
+  // Hive Authentication Handlers
   const handleLoginWithMethod = async (method: 'keychain' | 'hiveauth' | 'hivesigner' | 'privateKey') => {
     if (!username.trim()) {
       setError('Please enter your Hive username');
@@ -250,90 +266,107 @@ export const LoginDialog: React.FC<
           break;
       }
 
-      if (!onAuthenticate) {
-        throw new Error('No authentication callback provided. Please supply onAuthenticate prop to AuthButton.');
+      if (onAuthenticate) {
+        await authenticateWithCallback(hiveResult, onAuthenticate);
+      } else {
+        await authenticateWithCallback(hiveResult, async () => {
+          return JSON.stringify({ message: 'Authentication successful' });
+        });
       }
 
-      await authenticateWithCallback(hiveResult, onAuthenticate);
       onClose();
     } catch (err: any) {
-      if (currentUser && currentUser.loginType !== 'web2' && aioha) {
-        AuthService.switchUser(aioha, currentUser.username, currentUser.provider);
-        AuthService.removeUser(aioha, username.trim().toLowerCase());
-      }
-      setError(err?.message || 'Authentication failed. Please verify your credentials.');
+      console.error('Login error:', err);
+      setError(err?.message || 'Failed to authenticate');
     }
   };
 
-  const handlePeakLockLogin = async (targetUsername: string, targetPostingKey: string) => {
-    if (!targetUsername.trim() || !targetPostingKey.trim()) {
-      setError('Username and posting key are required for PeakLock');
-      return;
-    }
-    const cleanUsername = targetUsername.trim().toLowerCase();
-    setError(null);
-    try {
-      const currentLoggedInUser = aioha?.getCurrentUser?.();
-      const otherLogins = aioha?.getOtherLogins?.() || {};
-      if (currentLoggedInUser === cleanUsername) {
-        await aioha.logout();
-        await new Promise((res) => setTimeout(res, 300));
-      } else if (otherLogins && otherLogins[cleanUsername]) {
-        await AuthService.removeUser(aioha, cleanUsername);
-      }
-
-      const proof = onSignMessage(cleanUsername);
-      const hiveResult = await AuthService.loginWithPeakLock(aioha, cleanUsername, targetPostingKey.trim(), proof);
-
-      if (!onAuthenticate) {
-        throw new Error('No authentication callback provided.');
-      }
-
-      await authenticateWithCallback(hiveResult, onAuthenticate);
-      onClose();
-    } catch (err: any) {
-      if (currentUser && currentUser.loginType !== 'web2' && aioha) {
-        AuthService.switchUser(aioha, currentUser.username, currentUser.provider);
-        AuthService.removeUser(aioha, cleanUsername);
-      }
-      setError(err?.message || 'PeakLock authentication failed.');
-    }
-  };
-
+  // PeakLock Handlers
   const handleSavePeakLockAccount = async () => {
-    if (!peakLockNewUsername.trim() || !peakLockNewPostingKey.trim() || !peakLockNewPin.trim()) {
-      setError('Please enter username, posting key, and PIN code');
+    if (!peakLockNewUsername.trim()) {
+      setError('Please enter a Hive username');
       return;
     }
-    if (peakLockNewPin.trim().length < 4) {
-      setError('PIN code must be at least 4 digits');
+    if (!peakLockNewPostingKey.trim()) {
+      setError('Please enter your posting key');
       return;
     }
-    const cleanUsername = peakLockNewUsername.trim().toLowerCase();
-    savePeakLockAccount(cleanUsername, peakLockNewPostingKey, peakLockNewPin);
-    const updated = getPeakLockAccounts();
-    setPeakLockAccounts(updated);
-    await handlePeakLockLogin(cleanUsername, peakLockNewPostingKey);
+    if (!peakLockNewPin.trim() || peakLockNewPin.length < 4) {
+      setError('Please enter a PIN (at least 4 digits)');
+      return;
+    }
+
+    try {
+      const cleanUser = peakLockNewUsername.trim().toLowerCase();
+      savePeakLockAccount(cleanUser, peakLockNewPostingKey.trim(), peakLockNewPin.trim());
+
+      const proof = onSignMessage(cleanUser);
+      const hiveResult = await AuthService.loginWithPrivatePostingKey(
+        aioha,
+        cleanUser,
+        peakLockNewPostingKey.trim(),
+        proof
+      );
+
+      if (onAuthenticate) {
+        await authenticateWithCallback(hiveResult, onAuthenticate);
+      } else {
+        await authenticateWithCallback(hiveResult, async () => {
+          return JSON.stringify({ message: 'Authentication successful' });
+        });
+      }
+
+      onClose();
+    } catch (err: any) {
+      console.error('PeakLock save error:', err);
+      setError(err?.message || 'Failed to save and authenticate with PeakLock');
+    }
   };
 
   const handleUnlockPeakLockAccount = async () => {
-    if (!selectedPeakLockAccount || !peakLockPin.trim()) {
-      setError('Please enter your PIN code');
+    if (!selectedPeakLockAccount) return;
+    if (!peakLockPin.trim()) {
+      setError('Please enter your PIN');
       return;
     }
-    const decryptedKey = decryptPeakLockKey(selectedPeakLockAccount.encryptedKey, peakLockPin);
-    if (!decryptedKey) {
-      setError('Invalid PIN Code');
-      return;
+
+    try {
+      const decryptedKey = decryptPeakLockKey(selectedPeakLockAccount.encryptedKey, peakLockPin.trim());
+      if (!decryptedKey) {
+        setError('Incorrect PIN. Please try again.');
+        return;
+      }
+
+      const cleanUser = selectedPeakLockAccount.username;
+      const proof = onSignMessage(cleanUser);
+      const hiveResult = await AuthService.loginWithPrivatePostingKey(
+        aioha,
+        cleanUser,
+        decryptedKey,
+        proof
+      );
+
+      if (onAuthenticate) {
+        await authenticateWithCallback(hiveResult, onAuthenticate);
+      } else {
+        await authenticateWithCallback(hiveResult, async () => {
+          return JSON.stringify({ message: 'Authentication successful' });
+        });
+      }
+
+      onClose();
+    } catch (err: any) {
+      console.error('PeakLock unlock error:', err);
+      setError(err?.message || 'Failed to unlock PeakLock account');
     }
-    await handlePeakLockLogin(selectedPeakLockAccount.username, decryptedKey);
   };
 
   if (!isOpen) return null;
 
   const isDark = theme === 'dark';
   const hasCustomLoginColors = loginButtonColors && loginButtonColors.length > 0;
-  const loginButtonStyle = hasCustomLoginColors
+
+  const loginButtonStyle: React.CSSProperties = hasCustomLoginColors
     ? {
         background:
           loginButtonColors!.length === 1
@@ -384,7 +417,7 @@ export const LoginDialog: React.FC<
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* CHOICE SCREEN: pick Web2 or Web3 */}
+          {/* CHOICE SCREEN: 1. Web2 Quick Login, 2. Hive Login, 3. Web3 Login */}
           {mainView === 'choice' && (
             <div className="space-y-4">
               <div className="text-center mb-2">
@@ -392,9 +425,10 @@ export const LoginDialog: React.FC<
                 <p className="text-xs text-zinc-400">Choose a login method to continue</p>
               </div>
 
+              {/* 1st Option: Web2 Quick Login (Google / Apple) */}
               {hasWeb2Config && (
                 <button
-                  className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200"
+                  className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200 cursor-pointer"
                   onClick={() => {
                     setError(null);
                     setMainView('web2');
@@ -412,11 +446,12 @@ export const LoginDialog: React.FC<
                 </button>
               )}
 
+              {/* 2nd Option: Hive Login */}
               <button
-                className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200"
+                className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex items-center gap-3 transition-all duration-200 cursor-pointer"
                 onClick={() => {
                   setError(null);
-                  setMainView('web3');
+                  setMainView('hive');
                 }}
               >
                 <div className="flex items-center -space-x-2 shrink-0">
@@ -431,11 +466,33 @@ export const LoginDialog: React.FC<
                   <img src={PeakLockIcon} alt="PeakLock" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-bold text-sm text-zinc-100">Web3 Hive Login</div>
+                  <div className="font-bold text-sm text-zinc-100">Hive Login</div>
                   <div className="text-xs text-zinc-400">Keychain, HiveAuth, Private Key & more</div>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
+
+              {/* 3rd Option: Web3 Login (via Reown AppKit) */}
+              {hasWeb3Config && (
+                <button
+                  className="w-full p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(0,82,255,0.2)] flex items-center gap-3 transition-all duration-200 cursor-pointer"
+                  onClick={() => {
+                    setError(null);
+                    setMainView('web3');
+                  }}
+                >
+                  <div className="flex items-center -space-x-2 shrink-0">
+                    <img src={ReownIcon} alt="Reown" className="w-7 h-7 rounded-full bg-[#0052FF] p-1 border-2 border-zinc-900" />
+                    <img src={WalletConnectIcon} alt="WalletConnect" className="w-7 h-7 rounded-full bg-[#3B99FC] p-1 border-2 border-zinc-900" />
+                    <img src={EthereumIcon} alt="Ethereum" className="w-7 h-7 rounded-full bg-[#627EEA] p-1 border-2 border-zinc-900" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-bold text-sm text-zinc-100">Web3 Login</div>
+                    <div className="text-xs text-zinc-400">MetaMask, WalletConnect, Trust Wallet & more</div>
+                  </div>
+                  <span className="text-zinc-500">→</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -443,7 +500,7 @@ export const LoginDialog: React.FC<
           {mainView === 'web2' && hasWeb2Config && (
             <div className="space-y-5">
               <button
-                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
                 onClick={() => {
                   setError(null);
                   setMainView('choice');
@@ -462,7 +519,7 @@ export const LoginDialog: React.FC<
 
               {/* Instant Google Login Button */}
               <button
-                className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-700/80 hover:border-zinc-600 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg group"
+                className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-700/80 hover:border-zinc-600 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg group cursor-pointer"
                 onClick={handleGoogleLogin}
                 disabled={!!web2Loading || isLoading}
               >
@@ -493,7 +550,7 @@ export const LoginDialog: React.FC<
 
               {/* Apple Login Button */}
               <button
-                className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-700/80 hover:border-zinc-600 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg group"
+                className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-700/80 hover:border-zinc-600 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 shadow-md hover:shadow-lg group cursor-pointer"
                 onClick={handleAppleLogin}
                 disabled={!!web2Loading || isLoading}
               >
@@ -509,299 +566,319 @@ export const LoginDialog: React.FC<
             </div>
           )}
 
-          {/* WEB3 VIEW: Hive login methods */}
+          {/* WEB3 VIEW: Reown multi-chain Web3 login */}
           {mainView === 'web3' && (
-          <div className="space-y-5">
-            {hasWeb2Config && selectedWeb3Method === 'none' && !showQRCode && (
-              <button
-                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
-                onClick={() => {
-                  setError(null);
-                  setMainView('choice');
-                }}
-              >
-                ← Back to login options
-              </button>
-            )}
+            <Web3LoginDialog
+              isOpen={true}
+              embedded={true}
+              onClose={onClose}
+              onBack={() => {
+                setError(null);
+                setMainView(hasMultipleOptions ? 'choice' : 'hive');
+              }}
+              reownConfig={reownConfig}
+              onWeb3Authenticate={onWeb3Authenticate}
+              onSignMessage={onSignMessage}
+              onUpdateProfile={onUpdateProfile}
+              theme={theme}
+              loginButtonColors={loginButtonColors}
+              loginButtonTextColor={loginButtonTextColor}
+            />
+          )}
 
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">🐝</span>
-              <div>
-                <h4 className="font-bold text-base text-zinc-100">Hive Web3 Login</h4>
-                <p className="text-xs text-zinc-400">Connect using Keychain, HiveAuth, or Keys</p>
-              </div>
-            </div>
+          {/* HIVE VIEW: Keychain, HiveAuth, Private Key, PeakLock */}
+          {mainView === 'hive' && (
+            <div className="space-y-5">
+              {hasMultipleOptions && selectedHiveMethod === 'none' && !showQRCode && (
+                <button
+                  className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  onClick={() => {
+                    setError(null);
+                    setMainView('choice');
+                  }}
+                >
+                  ← Back to login options
+                </button>
+              )}
 
-            {/* QR Code Active View */}
-            {showQRCode && hiveAuthPayload ? (
-              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-center space-y-3">
-                <h5 className="font-bold text-sm text-zinc-200">HiveAuth Mobile Approval</h5>
-                <p className="text-xs text-zinc-400">Scan QR code with your HiveAuth app</p>
-                <div className="flex justify-center my-2">
-                  <div className="p-3 bg-white rounded-xl shadow-lg">
-                    <img
-                      src={qrCodeDataUrl}
-                      alt="HiveAuth QR Code"
-                      className="w-40 h-40 cursor-pointer"
-                      onClick={() => window.open(hiveAuthPayload)}
-                    />
-                  </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🐝</span>
+                <div>
+                  <h4 className="font-bold text-base text-zinc-100">Hive Login</h4>
+                  <p className="text-xs text-zinc-400">Connect using Keychain, HiveAuth, or Keys</p>
                 </div>
-                <div className="text-xs font-semibold text-red-400">Expires in: {timeRemaining}s</div>
-                <button
-                  className="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300"
-                  onClick={() => {
-                    setShowQRCode(false);
-                    setHiveAuthPayload(null);
-                  }}
-                >
-                  Cancel QR Code
-                </button>
               </div>
-            ) : selectedWeb3Method === 'none' ? (
-              /* Web3 Login Method Buttons (Initial State) */
-              <div className="grid grid-cols-2 gap-3">
-                {isKeychainEnabled && (
-                  <button
-                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group"
-                    onClick={() => {
-                      setError(null);
-                      setSelectedWeb3Method('keychain');
-                    }}
-                  >
-                    <img src={KeychainIcon} alt="Keychain" className="w-9 h-9 transition-transform group-hover:scale-110" />
-                    <span className="font-semibold text-xs text-zinc-200">Hive Keychain</span>
-                  </button>
-                )}
 
-                <button
-                  className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group"
-                  onClick={() => {
-                    setError(null);
-                    setSelectedWeb3Method('hiveauth');
-                  }}
-                >
-                  <img src={HiveAuthIcon} alt="HiveAuth" className="w-9 h-9 transition-transform group-hover:scale-110" />
-                  <span className="font-semibold text-xs text-zinc-200">HiveAuth Mobile</span>
-                </button>
-
-                {hiveSignerVisible && (
-                  <button
-                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group"
-                    onClick={() => {
-                      setError(null);
-                      setSelectedWeb3Method('hivesigner');
-                    }}
-                  >
-                    <img src={HiveSignerIcon} alt="HiveSigner" className="w-9 h-9 transition-transform group-hover:scale-110" />
-                    <span className="font-semibold text-xs text-zinc-200">HiveSigner</span>
-                  </button>
-                )}
-
-                <button
-                  className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group"
-                  onClick={() => {
-                    setError(null);
-                    setSelectedWeb3Method('privateKey');
-                  }}
-                >
-                  <img src={PrivateKeyIcon} alt="Private Key" className="w-9 h-9 transition-transform group-hover:scale-110" />
-                  <span className="font-semibold text-xs text-zinc-200">Private Key</span>
-                </button>
-
-                <button
-                  className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group col-span-2"
-                  onClick={() => {
-                    setError(null);
-                    setSelectedWeb3Method('peaklock');
-                    const accs = getPeakLockAccounts();
-                    setPeakLockAccounts(accs);
-                    setPeakLockMode(accs.length === 0 ? 'add' : 'select');
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <img src={PeakLockIcon} alt="PeakLock" className="w-7 h-7" />
-                    <span className="font-semibold text-xs text-zinc-200">PeakLock Storage</span>
-                  </div>
-                </button>
-              </div>
-            ) : (
-              /* Selected Web3 Method Form & Inputs */
-              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-                  <span className="font-semibold text-sm text-zinc-200 capitalize">
-                    {selectedWeb3Method === 'privateKey' ? 'Private Posting Key' : selectedWeb3Method} Login
-                  </span>
-                  <button
-                    className="text-xs text-zinc-400 hover:text-white"
-                    onClick={() => setSelectedWeb3Method('none')}
-                  >
-                    ← All Methods
-                  </button>
-                </div>
-
-                {selectedWeb3Method === 'peaklock' ? (
-                  /* PeakLock Form */
-                  <div className="space-y-3">
-                    {peakLockMode === 'select' && (
-                      <div className="space-y-2">
-                        {peakLockAccounts.map((acc) => (
-                          <div
-                            key={acc.username}
-                            className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700"
-                            onClick={() => {
-                              setSelectedPeakLockAccount(acc);
-                              setPeakLockMode('unlock');
-                            }}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <img
-                                src={`https://images.hive.blog/u/${acc.username}/avatar`}
-                                alt={acc.username}
-                                className="w-8 h-8 rounded-full"
-                              />
-                              <span className="font-semibold text-sm text-zinc-200">{acc.username}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-teal-400">Unlock →</span>
-                              <button
-                                className="text-xs text-red-500 hover:text-red-400 p-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const updated = removePeakLockAccount(acc.username);
-                                  setPeakLockAccounts(updated);
-                                  if (updated.length === 0) setPeakLockMode('add');
-                                }}
-                                title="Remove account"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        <button
-                          className="w-full py-2 rounded-xl bg-zinc-800 text-xs font-semibold text-zinc-300"
-                          onClick={() => setPeakLockMode('add')}
-                        >
-                          + Add New PeakLock Account
-                        </button>
-                      </div>
-                    )}
-
-                    {peakLockMode === 'add' && (
-                      <div className="space-y-2.5">
-                        <input
-                          type="text"
-                          placeholder="Hive username"
-                          className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm"
-                          value={peakLockNewUsername}
-                          onChange={(e) => setPeakLockNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
-                        />
-                        <input
-                          type="password"
-                          placeholder="Posting key"
-                          className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm"
-                          value={peakLockNewPostingKey}
-                          onChange={(e) => setPeakLockNewPostingKey(e.target.value)}
-                        />
-                        <input
-                          type="password"
-                          placeholder="New PIN (4-6 digits)"
-                          className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm text-center tracking-widest"
-                          value={peakLockNewPin}
-                          onChange={(e) => setPeakLockNewPin(e.target.value.replace(/[^0-9]/g, ''))}
-                        />
-                        <button
-                          className="w-full py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 font-semibold text-sm transition-colors"
-                          onClick={handleSavePeakLockAccount}
-                          disabled={isLoading}
-                        >
-                          Save & Login
-                        </button>
-                      </div>
-                    )}
-
-                    {peakLockMode === 'unlock' && selectedPeakLockAccount && (
-                      <div className="space-y-3 text-center">
-                        <p className="text-xs text-zinc-400">Enter PIN for @{selectedPeakLockAccount.username}</p>
-                        <input
-                          type="password"
-                          placeholder="PIN Code"
-                          className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm text-center tracking-widest"
-                          value={peakLockPin}
-                          onChange={(e) => setPeakLockPin(e.target.value.replace(/[^0-9]/g, ''))}
-                        />
-                        <button
-                          className="w-full py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 font-semibold text-sm transition-colors"
-                          onClick={handleUnlockPeakLockAccount}
-                          disabled={isLoading}
-                        >
-                          Unlock Account
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Standard Web3 Method Username/Key Inputs */
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      {avatarUrl && (
-                        <img
-                          src={avatarUrl}
-                          alt="Avatar"
-                          className="w-10 h-10 rounded-full border border-red-500/50 shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.hive.blog/u/0/avatar';
-                          }}
-                        />
-                      )}
-                      <input
-                        type="text"
-                        placeholder="Hive username (e.g. alice)"
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
+              {/* QR Code Active View */}
+              {showQRCode && hiveAuthPayload ? (
+                <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-center space-y-3">
+                  <h5 className="font-bold text-sm text-zinc-200">HiveAuth Mobile Approval</h5>
+                  <p className="text-xs text-zinc-400">Scan QR code with your HiveAuth app</p>
+                  <div className="flex justify-center my-2">
+                    <div className="p-3 bg-white rounded-xl shadow-lg">
+                      <img
+                        src={qrCodeDataUrl}
+                        alt="HiveAuth QR Code"
+                        className="w-40 h-40 cursor-pointer"
+                        onClick={() => window.open(hiveAuthPayload)}
                       />
                     </div>
-
-                    {selectedWeb3Method === 'privateKey' && (
-                      <>
-                        <input
-                          type="password"
-                          placeholder="Private Posting Key (5K...)"
-                          className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
-                          value={privateKey}
-                          onChange={(e) => setPrivateKey(e.target.value)}
-                        />
-                        {isActiveFieldVisible && (
-                          <input
-                            type="password"
-                            placeholder="Private Active Key (optional)"
-                            className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
-                            value={privateActiveKey}
-                            onChange={(e) => setPrivateActiveKey(e.target.value)}
-                          />
-                        )}
-                      </>
-                    )}
-
+                  </div>
+                  <div className="text-xs font-semibold text-red-400">Expires in: {timeRemaining}s</div>
+                  <button
+                    className="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 cursor-pointer"
+                    onClick={() => {
+                      setShowQRCode(false);
+                      setHiveAuthPayload(null);
+                    }}
+                  >
+                    Cancel QR Code
+                  </button>
+                </div>
+              ) : selectedHiveMethod === 'none' ? (
+                /* Hive Login Method Buttons (Initial State) */
+                <div className="grid grid-cols-2 gap-3">
+                  {isKeychainEnabled && (
                     <button
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
-                      style={loginButtonStyle}
-                      onClick={() => handleLoginWithMethod(selectedWeb3Method as any)}
-                      disabled={isLoading || !username.trim()}
+                      className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                      onClick={() => {
+                        setError(null);
+                        setSelectedHiveMethod('keychain');
+                      }}
                     >
-                      {isLoading ? (
-                        <span className="loading loading-spinner loading-xs"></span>
-                      ) : (
-                        `Continue with ${selectedWeb3Method === 'privateKey' ? 'Key' : selectedWeb3Method}`
-                      )}
+                      <img src={KeychainIcon} alt="Keychain" className="w-9 h-9 transition-transform group-hover:scale-110" />
+                      <span className="font-semibold text-xs text-zinc-200">Hive Keychain</span>
+                    </button>
+                  )}
+
+                  <button
+                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                    onClick={() => {
+                      setError(null);
+                      setSelectedHiveMethod('hiveauth');
+                    }}
+                  >
+                    <img src={HiveAuthIcon} alt="HiveAuth" className="w-9 h-9 transition-transform group-hover:scale-110" />
+                    <span className="font-semibold text-xs text-zinc-200">HiveAuth Mobile</span>
+                  </button>
+
+                  {hiveSignerVisible && (
+                    <button
+                      className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                      onClick={() => {
+                        setError(null);
+                        setSelectedHiveMethod('hivesigner');
+                      }}
+                    >
+                      <img src={HiveSignerIcon} alt="HiveSigner" className="w-9 h-9 transition-transform group-hover:scale-110" />
+                      <span className="font-semibold text-xs text-zinc-200">HiveSigner</span>
+                    </button>
+                  )}
+
+                  <button
+                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                    onClick={() => {
+                      setError(null);
+                      setSelectedHiveMethod('privateKey');
+                    }}
+                  >
+                    <img src={PrivateKeyIcon} alt="Private Key" className="w-9 h-9 transition-transform group-hover:scale-110" />
+                    <span className="font-semibold text-xs text-zinc-200">Private Key</span>
+                  </button>
+
+                  <button
+                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group col-span-2 cursor-pointer"
+                    onClick={() => {
+                      setError(null);
+                      setSelectedHiveMethod('peaklock');
+                      const accs = getPeakLockAccounts();
+                      setPeakLockAccounts(accs);
+                      setPeakLockMode(accs.length === 0 ? 'add' : 'select');
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={PeakLockIcon} alt="PeakLock" className="w-7 h-7" />
+                      <span className="font-semibold text-xs text-zinc-200">PeakLock Storage</span>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                /* Selected Hive Method Form & Inputs */
+                <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+                    <span className="font-semibold text-sm text-zinc-200 capitalize">
+                      {selectedHiveMethod === 'privateKey' ? 'Private Posting Key' : selectedHiveMethod} Login
+                    </span>
+                    <button
+                      className="text-xs text-zinc-400 hover:text-white cursor-pointer"
+                      onClick={() => setSelectedHiveMethod('none')}
+                    >
+                      ← All Methods
                     </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+
+                  {selectedHiveMethod === 'peaklock' ? (
+                    /* PeakLock Form */
+                    <div className="space-y-3">
+                      {peakLockMode === 'select' && (
+                        <div className="space-y-2">
+                          {peakLockAccounts.map((acc) => (
+                            <div
+                              key={acc.username}
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700"
+                              onClick={() => {
+                                setSelectedPeakLockAccount(acc);
+                                setPeakLockMode('unlock');
+                              }}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <img
+                                  src={`https://images.hive.blog/u/${acc.username}/avatar`}
+                                  alt={acc.username}
+                                  className="w-8 h-8 rounded-full"
+                                />
+                                <span className="font-semibold text-sm text-zinc-200">{acc.username}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-teal-400">Unlock →</span>
+                                <button
+                                  className="text-xs text-red-500 hover:text-red-400 p-1 cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const updated = removePeakLockAccount(acc.username);
+                                    setPeakLockAccounts(updated);
+                                    if (updated.length === 0) setPeakLockMode('add');
+                                  }}
+                                  title="Remove account"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            className="w-full py-2 rounded-xl bg-zinc-800 text-xs font-semibold text-zinc-300 cursor-pointer"
+                            onClick={() => setPeakLockMode('add')}
+                          >
+                            + Add New PeakLock Account
+                          </button>
+                        </div>
+                      )}
+
+                      {peakLockMode === 'add' && (
+                        <div className="space-y-2.5">
+                          <input
+                            type="text"
+                            placeholder="Hive username"
+                            className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm"
+                            value={peakLockNewUsername}
+                            onChange={(e) => setPeakLockNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
+                          />
+                          <input
+                            type="password"
+                            placeholder="Posting key"
+                            className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm"
+                            value={peakLockNewPostingKey}
+                            onChange={(e) => setPeakLockNewPostingKey(e.target.value)}
+                          />
+                          <input
+                            type="password"
+                            placeholder="New PIN (4-6 digits)"
+                            className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm text-center tracking-widest"
+                            value={peakLockNewPin}
+                            onChange={(e) => setPeakLockNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+                          />
+                          <button
+                            className="w-full py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 font-semibold text-sm transition-colors cursor-pointer"
+                            onClick={handleSavePeakLockAccount}
+                            disabled={isLoading}
+                          >
+                            Save & Login
+                          </button>
+                        </div>
+                      )}
+
+                      {peakLockMode === 'unlock' && selectedPeakLockAccount && (
+                        <div className="space-y-3 text-center">
+                          <p className="text-xs text-zinc-400">Enter PIN for @{selectedPeakLockAccount.username}</p>
+                          <input
+                            type="password"
+                            placeholder="PIN Code"
+                            className="w-full px-3.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm text-center tracking-widest"
+                            value={peakLockPin}
+                            onChange={(e) => setPeakLockPin(e.target.value.replace(/[^0-9]/g, ''))}
+                          />
+                          <button
+                            className="w-full py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 font-semibold text-sm transition-colors cursor-pointer"
+                            onClick={handleUnlockPeakLockAccount}
+                            disabled={isLoading}
+                          >
+                            Unlock Account
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Standard Hive Method Username/Key Inputs */
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        {avatarUrl && (
+                          <img
+                            src={avatarUrl}
+                            alt="Avatar"
+                            className="w-10 h-10 rounded-full border border-red-500/50 shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.hive.blog/u/0/avatar';
+                            }}
+                          />
+                        )}
+                        <input
+                          type="text"
+                          placeholder="Hive username (e.g. alice)"
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
+                        />
+                      </div>
+
+                      {selectedHiveMethod === 'privateKey' && (
+                        <>
+                          <input
+                            type="password"
+                            placeholder="Private Posting Key (5K...)"
+                            className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
+                            value={privateKey}
+                            onChange={(e) => setPrivateKey(e.target.value)}
+                          />
+                          {isActiveFieldVisible && (
+                            <input
+                              type="password"
+                              placeholder="Private Active Key (optional)"
+                              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:border-red-500 focus:outline-none"
+                              value={privateActiveKey}
+                              onChange={(e) => setPrivateActiveKey(e.target.value)}
+                            />
+                          )}
+                        </>
+                      )}
+
+                      <button
+                        className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                        style={loginButtonStyle}
+                        onClick={() => handleLoginWithMethod(selectedHiveMethod as any)}
+                        disabled={isLoading || !username.trim()}
+                      >
+                        {isLoading ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          `Continue with ${selectedHiveMethod === 'privateKey' ? 'Key' : selectedHiveMethod}`
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -809,7 +886,7 @@ export const LoginDialog: React.FC<
         {error && (
           <div className="mx-6 mb-4 p-3 rounded-xl bg-red-950/80 border border-red-800 text-red-200 text-xs flex items-center justify-between gap-2">
             <span>{error}</span>
-            <button className="text-red-400 hover:text-white" onClick={() => setError(null)}>
+            <button className="text-red-400 hover:text-white cursor-pointer" onClick={() => setError(null)}>
               ✕
             </button>
           </div>
