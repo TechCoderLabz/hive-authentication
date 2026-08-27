@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { LoggedInUser } from '../types/auth';
 import { useAuthStore } from '../store/authStore';
 import EthereumIcon from '../assets/ethereum.svg';
@@ -118,9 +119,12 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     }
   };
 
-  return (
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
       onClick={onClose}
     >
       <div
@@ -337,6 +341,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

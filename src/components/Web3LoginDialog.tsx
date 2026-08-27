@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ReownAuthService, type InjectedWalletInfo } from '../services/reownAuthService';
 import { useAuthStore } from '../store/authStore';
 import type { ReownConfig, Web3AuthResult } from '../types/auth';
@@ -602,12 +603,15 @@ export const Web3LoginDialog: React.FC<Web3LoginDialogProps> = ({
     return content;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300">
       <div className="relative w-full max-w-md bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden p-6">
         {content}
       </div>
       <div className="modal-backdrop" onClick={onClose}></div>
-    </div>
+    </div>,
+    document.body
   );
 };

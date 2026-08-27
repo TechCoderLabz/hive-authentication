@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import CryptoJS from 'crypto-js';
 import { LoginDialog } from './LoginDialog';
 import { ProfileEditModal } from './ProfileEditModal';
@@ -295,16 +296,19 @@ export const SwitchUserModal: React.FC<
     );
   }
 
+  if (typeof document === 'undefined') return null;
+
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
-        onClick={onClose}
-      >
+      {createPortal(
         <div
-          className="relative w-full max-w-md bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden flex flex-col p-6 space-y-4"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
+          onClick={onClose}
         >
+          <div
+            className="relative w-full max-w-md bg-zinc-950/95 text-white rounded-3xl border border-zinc-800 shadow-[0_0_50px_rgba(227,19,55,0.15)] overflow-hidden flex flex-col p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
           <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
             {/* Title */}
             <div className="flex items-center gap-2">
@@ -439,7 +443,9 @@ export const SwitchUserModal: React.FC<
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* Profile Edit Modal */}
       {editingUser && (

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import { AuthService } from '../services/authService';
 import { FirebaseAuthService } from '../services/firebaseAuthService';
@@ -377,9 +378,11 @@ export const LoginDialog: React.FC<
         background: 'linear-gradient(135deg, #e31337 0%, #c51231 100%)',
       };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
       onClick={onClose}
     >
       <div
@@ -892,6 +895,7 @@ export const LoginDialog: React.FC<
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
