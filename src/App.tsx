@@ -5,6 +5,7 @@ import type {
   HiveAuthResult,
   LoggedInUser,
   Web2AuthResult,
+  Web3AuthResult,
 } from "./types/auth";
 import { initAioha, KeyTypes } from "@aioha/aioha";
 import { AiohaProvider } from "@aioha/react-ui";
@@ -34,6 +35,16 @@ const web2Config = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
+const reownConfig = {
+  projectId: import.meta.env.VITE_REOWN_PROJECT_ID || "b56e18d47c72ab683b10814fe9495694",
+  metadata: {
+    name: "Hive Authentication Demo",
+    description: "A demo app for testing Hive & Web3 authentication",
+    url: typeof window !== "undefined" ? window.location.origin : "https://hivesuite.app",
+    icons: ["https://avatars.githubusercontent.com/u/179229932"],
+  },
 };
 
 function App() {
@@ -101,11 +112,39 @@ function App() {
     });
   };
 
+  const handleWeb3Authenticate = async (
+    web3Result: Web3AuthResult,
+  ): Promise<string> => {
+    console.log("Web3 authentication result:", web3Result);
+    console.log("Wallet Address:", web3Result.address);
+    console.log("Signature:", web3Result.signature);
+    console.log("Chain ID:", web3Result.chainId);
+
+    // In production, verify signature against challenge on your backend
+    return JSON.stringify({
+      message: "Web3 wallet authentication successful",
+      address: web3Result.address,
+      chainId: web3Result.chainId,
+      provider: web3Result.provider,
+      walletName: web3Result.walletName,
+      walletIcon: web3Result.walletIcon,
+      displayName: web3Result.displayName,
+      photoURL: web3Result.photoURL,
+    });
+  };
+
+  const handleUpdateProfile = async (profile: {
+    username: string;
+    displayName?: string;
+    photoURL?: string;
+  }): Promise<void> => {
+    console.log("Profile updated:", profile);
+    // In production, sync with backend POST /user/profile
+  };
+
   const handleAuthenticate = async (
     hiveResult: HiveAuthResult,
   ): Promise<string> => {
-    // console.log("Hive authentication result:", hiveResult);
-
     try {
       const response = await fetch(
         "https://api.hivesuite.app/login",
@@ -130,9 +169,6 @@ function App() {
       }
 
       const data = await response.json();
-      // console.log('Server response:', data);
-
-      // Return your server response as JSON string
       return JSON.stringify(data);
     } catch (error) {
       console.error("Authentication error:", error);
@@ -146,7 +182,6 @@ function App() {
       key,
       async (hiveResult) => {
         console.log("Hive result:", hiveResult);
-        // TODO: Add server validation
         return JSON.stringify({ message: "Server validation successful" });
       },
     );
@@ -156,7 +191,6 @@ function App() {
   const handleProgrammaticLogout = async () => {
     try {
       await logout();
-      // console.log("User logged out");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -212,8 +246,8 @@ function App() {
             <div className="card-body">
               <h2 className="card-title text-2xl">Hive Authentication Demo</h2>
               <p className="text-base-content/70">
-                This is a demo of the Hive Authentication package with a working
-                API integration.
+                This is a demo of the Hive Authentication package supporting Web2 Quick Login,
+                Hive Login, and Web3 Login via Reown.
               </p>
               <div className="card-actions justify-center mt-4">
                 <AuthButton
@@ -226,25 +260,26 @@ function App() {
                     // console.log("AuthButton dialog closed");
                   }}
                   isActiveFieldVisible={true}
-                  onSignMessage={(username) => {
+                  onSignMessage={(usernameOrAddress) => {
                     const objectForAuth = {
                       signed_message: {
                         type: "login",
                         app: "thehivemobileapp",
                       },
-                      authors: [username],
+                      authors: [usernameOrAddress],
                       timestamp: new Date().toISOString(),
                     };
                     return JSON.stringify(objectForAuth);
                   }}
                   theme={theme} // Pass theme to AuthButton
-                  // Example: custom login button color / gradient
-                  // loginButtonColors={["#e31337"]}
-                  // loginButtonTextColor="white"
                   web2Config={web2Config}
                   onWeb2Authenticate={handleWeb2Authenticate}
-                  hiveSignerVisible={true}
                   enableWeb2Login={true}
+                  reownConfig={reownConfig}
+                  onWeb3Authenticate={handleWeb3Authenticate}
+                  enableWeb3Login={true}
+                  onUpdateProfile={handleUpdateProfile}
+                  hiveSignerVisible={true}
                 />
               </div>
               <div className="card-actions justify-center mt-4">
@@ -273,19 +308,34 @@ function App() {
                   Currently Logged In
                 </h3>
                 <div className="space-y-2 text-green-700">
+                  {currentUser.displayName && (
+                    <p>
+                      <strong>Display Name:</strong> {currentUser.displayName}
+                    </p>
+                  )}
                   <p>
                     <strong>Username:</strong> {currentUser.username}
                   </p>
                   <p>
-                    <strong>Provider:</strong> {currentUser.provider}
+                    <strong>Login Type:</strong> {currentUser.loginType || 'hive'}
                   </p>
                   <p>
-                    <strong>Public Key:</strong>{" "}
-                    {currentUser.publicKey.substring(0, 20)}...
+                    <strong>Provider:</strong> {currentUser.web3WalletName || currentUser.provider}
                   </p>
+                  {currentUser.address && (
+                    <p>
+                      <strong>Wallet Address:</strong> {currentUser.address}
+                    </p>
+                  )}
+                  {currentUser.publicKey && (
+                    <p>
+                      <strong>Public Key / Address:</strong>{" "}
+                      {currentUser.publicKey.substring(0, 20)}...
+                    </p>
+                  )}
                   <p>
                     <strong>Server Response:</strong>{" "}
-                    {currentUser.serverResponse.substring(0, 20)}...
+                    {currentUser.serverResponse.substring(0, 40)}...
                   </p>
                 </div>
               </div>
@@ -320,7 +370,7 @@ function App() {
           )}
 
           {/* Pay Button */}
-          {loggedInUsers.length > 0 && (
+          {loggedInUsers.length > 0 && currentUser?.loginType !== 'web3' && (
             <div className="card-actions justify-center mt-4">
               <button
                 onClick={handlePayButtonClick}
@@ -339,7 +389,9 @@ function App() {
         </div>
 
         {/* Wallet Section */}
-        {currentUser && <Wallet username={currentUser.username} />}
+        {currentUser && currentUser.loginType !== 'web3' && (
+          <Wallet username={currentUser.username} />
+        )}
 
         <ReportModal
           isOpen={isReportModalOpen}

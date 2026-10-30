@@ -3,10 +3,14 @@ import CryptoJS from "crypto-js";
 import { useAuthStore } from "../store/authStore";
 import { LoginDialog } from "./LoginDialog";
 import { SwitchUserModal } from "./SwitchUserModal";
+import { ProfileEditModal } from "./ProfileEditModal";
 import type { AuthButtonProps } from "../types/auth";
 
 export const AuthButton: React.FC<
-  AuthButtonProps & { theme?: "light" | "dark" }
+  AuthButtonProps & {
+    theme?: "light" | "dark";
+    onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
+  }
 > = ({
   encryptionKey,
   onAuthenticate,
@@ -20,12 +24,17 @@ export const AuthButton: React.FC<
   web2Config,
   onWeb2Authenticate,
   enableWeb2Login = false,
+  reownConfig,
+  onWeb3Authenticate,
+  enableWeb3Login = true,
+  onUpdateProfile,
   hiveSignerVisible = false,
   theme = "light", // Default to "light" theme
 }) => {
   const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isSwitchUserModalOpen, setIsSwitchUserModalOpen] = useState(false);
+  const [isProfileSetupOpen, setIsProfileSetupOpen] = useState(false);
   const { currentUser } = useAuthStore();
 
   useEffect(() => {
@@ -39,6 +48,21 @@ export const AuthButton: React.FC<
     });
   }, [aioha]);
 
+  // Prompt profile setup for Web3/Web2 users when they log in without a displayName
+  useEffect(() => {
+    if (
+      currentUser &&
+      (currentUser.loginType === 'web3' || currentUser.loginType === 'web2') &&
+      !currentUser.displayName
+    ) {
+      const promptKey = `hs_profile_prompted_${currentUser.username}`;
+      if (!sessionStorage.getItem(promptKey)) {
+        sessionStorage.setItem(promptKey, '1');
+        setIsProfileSetupOpen(true);
+      }
+    }
+  }, [currentUser]);
+
   const handleButtonClick = () => {
     if (currentUser) {
       // Show switch user modal
@@ -48,23 +72,39 @@ export const AuthButton: React.FC<
       setIsLoginDialogOpen(true);
     }
   };
+
   const getAvatarUrl = () => {
+    if (currentUser?.photoURL) {
+      return currentUser.photoURL;
+    }
     if (currentUser?.loginType === 'web2') {
       // Use Google photo or Gravatar for email users
-      if (currentUser.photoURL) return currentUser.photoURL;
-      // Gravatar fallback using email MD5 hash
       if (currentUser.email) {
         const hash = CryptoJS.MD5(currentUser.email.trim().toLowerCase()).toString();
         return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
       }
       return 'https://www.gravatar.com/avatar/?d=identicon';
     }
+    if (currentUser?.loginType === 'web3') {
+      const addr = currentUser.address || currentUser.username;
+      return `https://effigy.im/a/${addr}.svg`;
+    }
     return `https://images.hive.blog/u/${currentUser?.username}/avatar`;
   };
 
   const getDisplayName = () => {
+    if (currentUser?.displayName) {
+      return currentUser.displayName;
+    }
     if (currentUser?.loginType === 'web2') {
-      return currentUser.displayName || currentUser.email || currentUser.username;
+      return currentUser.email || currentUser.username;
+    }
+    if (currentUser?.loginType === 'web3') {
+      const addr = currentUser.address || currentUser.username;
+      if (addr.startsWith('0x') && addr.length > 10) {
+        return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+      }
+      return addr;
     }
     return currentUser?.username;
   };
@@ -89,7 +129,7 @@ export const AuthButton: React.FC<
     <>
       {currentUser ? (
         <div
-          className={`flex flex-col items-center ${
+          className={`flex flex-col items-center cursor-pointer ${
             theme === "dark" ? "text-gray-300" : "text-gray-700"
           }`}
           onClick={handleButtonClick}
@@ -102,7 +142,11 @@ export const AuthButton: React.FC<
                 alt={`${getDisplayName()} avatar`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
-                    "https://www.gravatar.com/avatar/?d=mp";
+                    currentUser?.loginType === 'web2'
+                      ? "https://www.gravatar.com/avatar/?d=mp"
+                      : currentUser?.loginType === 'web3'
+                      ? "https://ui-avatars.com/api/?name=W3&background=0052FF&color=fff"
+                      : "https://images.hive.blog/u/0/avatar";
                 }}
               />
             </div>
@@ -149,6 +193,10 @@ export const AuthButton: React.FC<
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
         enableWeb2Login={enableWeb2Login}
+        reownConfig={reownConfig}
+        onWeb3Authenticate={onWeb3Authenticate}
+        enableWeb3Login={enableWeb3Login}
+        onUpdateProfile={onUpdateProfile}
         hiveSignerVisible={hiveSignerVisible}
       />
 
@@ -169,8 +217,23 @@ export const AuthButton: React.FC<
         web2Config={web2Config}
         onWeb2Authenticate={onWeb2Authenticate}
         enableWeb2Login={enableWeb2Login}
+        reownConfig={reownConfig}
+        onWeb3Authenticate={onWeb3Authenticate}
+        enableWeb3Login={enableWeb3Login}
+        onUpdateProfile={onUpdateProfile}
         hiveSignerVisible={hiveSignerVisible}
       />
+
+      {/* Auto-Prompt Profile Setup Modal if user has no display name */}
+      {isProfileSetupOpen && currentUser && (
+        <ProfileEditModal
+          isOpen={isProfileSetupOpen}
+          user={currentUser}
+          onClose={() => setIsProfileSetupOpen(false)}
+          onUpdateProfile={onUpdateProfile}
+          theme={theme}
+        />
+      )}
     </>
   );
 };

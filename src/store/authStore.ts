@@ -166,6 +166,9 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (u.uid && user.uid) return u.uid !== user.uid;
             if (u.email && user.email) return u.email.toLowerCase() !== user.email.toLowerCase();
           }
+          if (u.loginType === 'web3' && user.loginType === 'web3') {
+            if (u.address && user.address) return u.address.toLowerCase() !== user.address.toLowerCase();
+          }
           return u.username.trim().toLowerCase() !== user.username.trim().toLowerCase();
         }),
         user,
@@ -183,6 +186,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const cleanUser = username.trim().toLowerCase();
       const updatedUsers = loggedInUsers.filter((u) => {
         if (u.uid && u.uid.toLowerCase() === cleanUser) return false;
+        if (u.address && u.address.toLowerCase() === cleanUser) return false;
         return u.username.trim().toLowerCase() !== cleanUser;
       });
       
@@ -193,7 +197,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       // If removing current user, clear current user
       const isCurrent =
         currentUser?.username?.trim().toLowerCase() === cleanUser ||
-        (currentUser?.uid && currentUser.uid.toLowerCase() === cleanUser);
+        (currentUser?.uid && currentUser.uid.toLowerCase() === cleanUser) ||
+        (currentUser?.address && currentUser.address.toLowerCase() === cleanUser);
 
       if (isCurrent) {
         safeStorageRemoveItem(STORAGE_KEYS.CURRENT_USER);
@@ -207,6 +212,43 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       safeStorageRemoveItem(STORAGE_KEYS.LOGGED_IN_USERS);
       safeStorageRemoveItem(STORAGE_KEYS.CURRENT_USER);
       set({ currentUser: null, loggedInUsers: [] });
+    },
+
+    updateUserProfile: (usernameOrAddress, profile) => {
+      const { currentUser, loggedInUsers, secretKey } = get();
+      const target = usernameOrAddress.trim().toLowerCase();
+
+      const updateMatch = (user: LoggedInUser): LoggedInUser => {
+        const matches =
+          user.username.trim().toLowerCase() === target ||
+          (user.address && user.address.toLowerCase() === target) ||
+          (user.uid && user.uid.toLowerCase() === target);
+
+        if (!matches) return user;
+
+        return {
+          ...user,
+          ...(profile.displayName !== undefined && { displayName: profile.displayName }),
+          ...(profile.photoURL !== undefined && { photoURL: profile.photoURL }),
+        };
+      };
+
+      const updatedUsers = loggedInUsers.map(updateMatch);
+      const updatedCurrent = currentUser ? updateMatch(currentUser) : null;
+
+      // Encrypt and save updated states
+      const encryptedUsers = encryptData(updatedUsers, secretKey || '');
+      safeStorageSetItem(STORAGE_KEYS.LOGGED_IN_USERS, encryptedUsers);
+
+      if (updatedCurrent) {
+        const encryptedUser = encryptData(updatedCurrent, secretKey || '');
+        safeStorageSetItem(STORAGE_KEYS.CURRENT_USER, encryptedUser);
+      }
+
+      set({
+        loggedInUsers: updatedUsers,
+        currentUser: updatedCurrent,
+      });
     },
     
     authenticateWithCallback: async (hiveResult, callback) => {
@@ -271,6 +313,59 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         get().setCurrentUser(user);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Web2 authentication failed';
+        set({ error: errorMessage });
+        throw error;
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    authenticateWeb3WithCallback: async (web3Result, callback) => {
+      set({ isLoading: true, error: null });
+
+      try {
+        const serverResponse = await callback(web3Result);
+        const address = web3Result.address.toLowerCase();
+
+        // Extract profile metadata from serverResponse if returned
+        let serverDisplayName: string | undefined = undefined;
+        let serverPhotoURL: string | undefined = undefined;
+        let serverProvider: string | undefined = undefined;
+
+        try {
+          const parsed = typeof serverResponse === 'string' ? JSON.parse(serverResponse) : serverResponse;
+          if (parsed && typeof parsed === 'object') {
+            const userData = parsed.user || parsed;
+            if (userData.displayName) serverDisplayName = userData.displayName;
+            if (userData.profilePicture || userData.photoURL) serverPhotoURL = userData.profilePicture || userData.photoURL;
+            if (userData.provider) serverProvider = userData.provider;
+          }
+        } catch {
+          // ignore parsing error
+        }
+
+        const user: LoggedInUser = {
+          username: address,
+          provider: serverProvider || web3Result.walletName || web3Result.provider || 'reown',
+          challenge: web3Result.message || '',
+          publicKey: address,
+          proof: web3Result.signature || web3Result.proof || '',
+          serverResponse,
+          loginType: 'web3',
+          address,
+          chainId: web3Result.chainId,
+          signature: web3Result.signature,
+          web3Provider: web3Result.provider || 'reown',
+          web3WalletName: web3Result.walletName,
+          web3WalletIcon: web3Result.walletIcon,
+          displayName: serverDisplayName || web3Result.displayName || null,
+          photoURL: serverPhotoURL || web3Result.photoURL || null,
+        };
+
+        get().addLoggedInUser(user);
+        get().setCurrentUser(user);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Web3 authentication failed';
         set({ error: errorMessage });
         throw error;
       } finally {

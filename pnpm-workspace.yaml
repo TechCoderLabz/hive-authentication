@@ -1,5 +1,6 @@
 allowBuilds:
   '@firebase/util': true
+  '@reown/appkit': true
   core-js: true
   esbuild: true
   protobufjs: true

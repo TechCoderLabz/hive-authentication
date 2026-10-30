@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Flag } from 'lucide-react';
 
 export interface ReportModalProps {
@@ -69,9 +70,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 bg-opacity-30 flex items-center justify-center z-50 p-4" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 bg-opacity-30 flex items-center justify-center z-[1000] p-4" onClick={onClose}>
       <div className="bg-black/90 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] flex flex-col border border-gray-800" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
@@ -168,6 +170,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

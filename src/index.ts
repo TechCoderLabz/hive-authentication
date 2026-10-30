@@ -2,7 +2,9 @@
 export { AuthButton } from './components/AuthButton';
 export { LoginDialog } from './components/LoginDialog';
 export { SwitchUserModal } from './components/SwitchUserModal';
+export { ProfileEditModal } from './components/ProfileEditModal';
 export { Web2LoginDialog } from './components/Web2LoginDialog';
+export { Web3LoginDialog } from './components/Web3LoginDialog';
 export { Wallet } from './components/Wallet';
 export { TransactionHistory } from './components/TransactionHistory';
 export { VideoFeed } from './components/video/VideoFeed';
@@ -16,6 +18,7 @@ export { ReportModal } from './components/ReportModal';
 
 // Services
 export { AuthService } from './services/authService';
+export { ReownAuthService } from './services/reownAuthService';
 export { ProgrammaticAuth } from './services/programmaticAuth';
 
 // PeakLock Storage Utilities
@@ -26,7 +29,6 @@ export {
   removePeakLockAccount,
   type PeakLockAccount,
 } from './utils/peakLockStorage';
-
 
 // Hive API node configuration — let the host app (e.g. HiveSuite) push
 // its user-selected node into the package so every internal dhive
@@ -48,4 +50,7 @@ export type {
   LoginDialogProps,
   Web2Config,
   Web2AuthResult,
+  ReownConfig,
+  Web3AuthResult,
+  AuthButtonProps,
 } from './types/auth';

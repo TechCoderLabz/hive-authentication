@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Aioha } from "@aioha/aioha";
 
 export interface HiveAuthResult {
@@ -24,13 +25,21 @@ export interface LoggedInUser {
   serverResponse: string; // JSON string from dev's app
   privatePostingKey?: string;
   privateActiveKey?: string; // Optional active key (private key login only)
-  // Web2 fields (populated when logged in via Google/Email)
-  loginType?: 'hive' | 'web2';
+  // Login type indicator: 'hive' | 'web2' | 'web3'
+  loginType?: 'hive' | 'web2' | 'web3';
+  // Web2 fields (populated when logged in via Google/Apple/Email)
   web2Provider?: 'google' | 'apple' | 'email';
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
   uid?: string;
+  // Web3 / Reown fields (populated when logged in via Web3 wallet)
+  address?: string;
+  chainId?: number | string;
+  signature?: string;
+  web3Provider?: string;
+  web3WalletName?: string;
+  web3WalletIcon?: string;
 }
 
 export interface AuthStore {
@@ -47,6 +56,10 @@ export interface AuthStore {
   addLoggedInUser: (user: LoggedInUser) => void;
   removeLoggedInUser: (username: string) => Promise<void>;
   clearAllUsers: () => Promise<void>;
+  updateUserProfile: (
+    usernameOrAddress: string,
+    profile: { displayName?: string; photoURL?: string }
+  ) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setHiveAuthPayload: (payload: string | null) => void;
@@ -60,6 +73,10 @@ export interface AuthStore {
   authenticateWeb2WithCallback: (
     web2Result: Web2AuthResult,
     callback: (web2Result: Web2AuthResult) => Promise<string>
+  ) => Promise<void>;
+  authenticateWeb3WithCallback: (
+    web3Result: Web3AuthResult,
+    callback: (web3Result: Web3AuthResult) => Promise<string>
   ) => Promise<void>;
   switchToActiveForCurrentUser: () => Promise<void>;
   switchToPostingForCurrentUser: () => Promise<void>;
@@ -75,7 +92,7 @@ export interface SwitchUserModalProps {
   onSignMessage: (username: string) => string;
   /** Optional colors for the Login/Add Account buttons. */
   loginButtonColors?: string[];
-  /** Optional color for \"Login\" / \"Add Account\" text. */
+  /** Optional color for "Login" / "Add Account" text. */
   loginButtonTextColor?: string;
   /** Optional Firebase config for Web2 login. */
   web2Config?: Web2Config;
@@ -83,6 +100,14 @@ export interface SwitchUserModalProps {
   onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
   /** Feature flag to enable or disable Web2 login UI. Default: false */
   enableWeb2Login?: boolean;
+  /** Optional Reown AppKit config for Web3 wallet login. */
+  reownConfig?: ReownConfig;
+  /** Optional callback for Web3 authentication result. */
+  onWeb3Authenticate?: (web3Result: Web3AuthResult) => Promise<string>;
+  /** Feature flag to enable or disable Web3 login UI. Default: true when reownConfig is passed */
+  enableWeb3Login?: boolean;
+  /** Optional callback when user updates profile name/avatar */
+  onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }
@@ -103,6 +128,18 @@ export interface LoginDialogProps {
   loginButtonTextColor?: string;
   /** Feature flag to enable or disable Web2 login UI. Default: false */
   enableWeb2Login?: boolean;
+  /** Optional Firebase config for Web2 login. */
+  web2Config?: Web2Config;
+  /** Optional callback for Web2 authentication result. */
+  onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
+  /** Optional Reown AppKit config for Web3 wallet login. */
+  reownConfig?: ReownConfig;
+  /** Optional callback for Web3 authentication result. */
+  onWeb3Authenticate?: (web3Result: Web3AuthResult) => Promise<string>;
+  /** Feature flag to enable or disable Web3 login UI. Default: true when reownConfig is passed */
+  enableWeb3Login?: boolean;
+  /** Optional callback when user updates profile name/avatar */
+  onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }
@@ -125,6 +162,35 @@ export interface Web2AuthResult {
   displayName: string | null;
   photoURL: string | null;
   idToken: string;
+}
+
+export interface ReownConfig {
+  projectId: string;
+  metadata?: {
+    name: string;
+    description?: string;
+    url?: string;
+    icons?: string[];
+  };
+  appName?: string;
+  appDescription?: string;
+  appUrl?: string;
+  appIcons?: string[];
+  networks?: any[];
+  themeMode?: 'dark' | 'light';
+}
+
+export interface Web3AuthResult {
+  provider: string; // 'reown' | 'walletconnect' | 'metamask' | 'injected'
+  address: string;
+  chainId?: number | string;
+  signature?: string;
+  message?: string;
+  proof?: string;
+  walletName?: string;
+  walletIcon?: string;
+  displayName?: string | null;
+  photoURL?: string | null;
 }
 
 export interface AuthButtonProps {
@@ -151,7 +217,14 @@ export interface AuthButtonProps {
   onWeb2Authenticate?: (web2Result: Web2AuthResult) => Promise<string>;
   /** Feature flag to enable or disable Web2 login UI. Default: false */
   enableWeb2Login?: boolean;
+  /** Optional Reown AppKit config for Web3 wallet login. */
+  reownConfig?: ReownConfig;
+  /** Optional callback for Web3 authentication result. Required if reownConfig is provided. */
+  onWeb3Authenticate?: (web3Result: Web3AuthResult) => Promise<string>;
+  /** Feature flag to enable or disable Web3 login UI. Default: false */
+  enableWeb3Login?: boolean;
+  /** Optional callback when user updates profile name/avatar */
+  onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
 }
-

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
