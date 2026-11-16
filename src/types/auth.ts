@@ -110,6 +110,14 @@ export interface SwitchUserModalProps {
   onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
+  /**
+   * HiveAuth login visibility.
+   * `undefined` (default): hidden inside the Hive Keychain mobile in-app
+   * browser, where `window.hive_keychain` is injected on a phone or tablet.
+   * Desktop Keychain, ordinary mobile browsers, and the Capacitor app keep
+   * HiveAuth. `true` always shows it. `false` always hides it.
+   */
+  hiveAuthVisible?: boolean;
 }
 
 export interface LoginDialogProps {
@@ -142,6 +150,11 @@ export interface LoginDialogProps {
   onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
+  /**
+   * HiveAuth login visibility. `undefined` hides it only inside the Hive
+   * Keychain mobile in-app browser. `true` always shows it. `false` always hides it.
+   */
+  hiveAuthVisible?: boolean;
 }
 
 export interface Web2Config {
@@ -227,4 +240,9 @@ export interface AuthButtonProps {
   onUpdateProfile?: (profile: { username: string; displayName?: string; photoURL?: string }) => Promise<void>;
   /** When true, shows HiveSigner as a login option. Default: false */
   hiveSignerVisible?: boolean;
+  /**
+   * HiveAuth login visibility. `undefined` hides it only inside the Hive
+   * Keychain mobile in-app browser. `true` always shows it. `false` always hides it.
+   */
+  hiveAuthVisible?: boolean;
 }

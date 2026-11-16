@@ -29,6 +29,7 @@ export const AuthButton: React.FC<
   enableWeb3Login = true,
   onUpdateProfile,
   hiveSignerVisible = false,
+  hiveAuthVisible,
   theme = "light", // Default to "light" theme
 }) => {
   const { setHiveAuthPayload, setSecretKey, setAioha } = useAuthStore();
@@ -198,6 +199,7 @@ export const AuthButton: React.FC<
         enableWeb3Login={enableWeb3Login}
         onUpdateProfile={onUpdateProfile}
         hiveSignerVisible={hiveSignerVisible}
+        hiveAuthVisible={hiveAuthVisible}
       />
 
       <SwitchUserModal
@@ -222,6 +224,7 @@ export const AuthButton: React.FC<
         enableWeb3Login={enableWeb3Login}
         onUpdateProfile={onUpdateProfile}
         hiveSignerVisible={hiveSignerVisible}
+        hiveAuthVisible={hiveAuthVisible}
       />
 
       {/* Auto-Prompt Profile Setup Modal if user has no display name */}

@@ -451,6 +451,12 @@ interface AuthButtonProps {
   isActiveFieldVisible?: boolean;
   /** When true, shows HiveSigner as a login option. Default: false. */
   hiveSignerVisible?: boolean;
+  /**
+   * HiveAuth visibility. Omit to hide HiveAuth only inside the Hive Keychain
+   * mobile in-app browser (`window.hive_keychain` on a phone or tablet).
+   * `true` always shows it. `false` always hides it.
+   */
+  hiveAuthVisible?: boolean;
   /** Called when the login / switch-user dialog closes. */
   onClose?: () => void;
 
@@ -482,6 +488,7 @@ interface AuthButtonProps {
 | `shouldShowSwitchUser` | no | `true` | When `false`, the dialog only shows the active user and a logout button (no multi-account switching). |
 | `isActiveFieldVisible` | no | `false` | Adds an optional Active Key input to the Private Key login form. If filled in, the key is validated and stored in `privateActiveKey`. |
 | `hiveSignerVisible` | no | `false` | Reveals the HiveSigner login option. See **HiveSigner Integration** below — requires a callback route and `hivesigner.callbackURL` in the Aioha init. |
+| `hiveAuthVisible` | no | auto | Omit to hide HiveAuth when the page is inside the Hive Keychain mobile in-app browser (`window.hive_keychain` on a phone or tablet, including when that object appears shortly after load). Desktop Keychain, ordinary mobile browsers, and Capacitor apps still show HiveAuth. `true` always shows it. `false` always hides it. |
 | `onClose` | no | — | Fires when either the login or switch-user modal closes. |
 | `loginButtonColors` | no | — | Solid color (single entry) or gradient (multi-entry) for the Login / Add Account buttons. |
 | `loginButtonTextColor` | no | — | Overrides the Login button text color. |
