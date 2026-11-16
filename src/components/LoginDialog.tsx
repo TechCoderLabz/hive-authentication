@@ -26,6 +26,7 @@ import {
   removePeakLockAccount,
   type PeakLockAccount,
 } from '../utils/peakLockStorage';
+import { iosSafeHasUrl, isIosHiveAuthDevice } from '../utils/hasDeepLink';
 
 export const LoginDialog: React.FC<
   LoginDialogProps & {
@@ -619,12 +620,27 @@ export const LoginDialog: React.FC<
                   <p className="text-xs text-zinc-400">Scan QR code with your HiveAuth app</p>
                   <div className="flex justify-center my-2">
                     <div className="p-3 bg-white rounded-xl shadow-lg">
-                      <img
-                        src={qrCodeDataUrl}
-                        alt="HiveAuth QR Code"
-                        className="w-40 h-40 cursor-pointer"
-                        onClick={() => window.open(hiveAuthPayload)}
-                      />
+                      {/* Real anchor, not window.open. iOS delivers the path
+                          of a tapped custom-scheme link to Keychain and drops
+                          it for window.open. The QR image stays aioha's
+                          original string so another device can still scan it.
+                          Android and desktop keep window.open of that string. */}
+                      <a
+                        href={isIosHiveAuthDevice() ? iosSafeHasUrl(hiveAuthPayload) : hiveAuthPayload}
+                        aria-label="Open this HiveAuth request in Keychain"
+                        style={{ textDecoration: 'none' }}
+                        onClick={(event) => {
+                          if (isIosHiveAuthDevice()) return
+                          event.preventDefault()
+                          window.open(hiveAuthPayload)
+                        }}
+                      >
+                        <img
+                          src={qrCodeDataUrl}
+                          alt="HiveAuth QR Code"
+                          className="w-40 h-40 cursor-pointer"
+                        />
+                      </a>
                     </div>
                   </div>
                   <div className="text-xs font-semibold text-red-400">Expires in: {timeRemaining}s</div>
