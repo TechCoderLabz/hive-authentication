@@ -14,6 +14,7 @@ export { HiveSignerCallback } from './components/HiveSignerCallback';
 // Store and hooks
 export { useAuthStore } from './store/authStore';
 export { useProgrammaticAuth } from './hooks/useProgrammaticAuth';
+export { useKeychainPresence } from './hooks/useKeychainPresence';
 export { ReportModal } from './components/ReportModal';
 
 // Services
@@ -39,6 +40,18 @@ export {
   setHiveAuthApiNode,
   subscribeHiveAuthApiNode,
 } from './config/hiveApi';
+
+// Keychain mobile in-app browser: HiveAuth's same-device link does not
+// complete there, so login UI hides HiveAuth when this is true.
+export {
+  classifyKeychainBrowser,
+  readKeychainPresence,
+  isKeychainMobileInAppBrowser,
+  shouldHideHiveAuth,
+  isNativeAppShell,
+  isMobileBrowserDevice,
+} from './utils/keychainMobileBrowser';
+export type { KeychainBrowserSnapshot, KeychainPresence } from './utils/keychainMobileBrowser';
 
 // Types
 export type {

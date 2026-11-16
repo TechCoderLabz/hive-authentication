@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CryptoJS from 'crypto-js';
 import { LoginDialog } from './LoginDialog';
@@ -21,6 +21,8 @@ import TrustWalletIcon from '../assets/trustwallet.svg';
 import PhantomIcon from '../assets/phantom.svg';
 import RainbowIcon from '../assets/rainbow.svg';
 import WalletConnectIcon from '../assets/walletconnect.svg';
+import { shouldHideHiveAuth } from '../utils/keychainMobileBrowser';
+import { useKeychainPresence } from '../hooks/useKeychainPresence';
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & {
@@ -49,12 +51,38 @@ export const SwitchUserModal: React.FC<
   enableWeb3Login = true,
   onUpdateProfile,
   hiveSignerVisible = false,
+  hiveAuthVisible,
 }) => {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [editingUser, setEditingUser] = useState<LoggedInUser | null>(null);
+  const [hiveAuthNote, setHiveAuthNote] = useState<string | null>(null);
+  const keychain = useKeychainPresence(isOpen);
+  const hideHiveAuth = shouldHideHiveAuth(keychain, hiveAuthVisible);
   const { currentUser, loggedInUsers, setCurrentUser, removeLoggedInUser, clearAllUsers } = useAuthStore();
 
+  useEffect(() => {
+    if (!isOpen) setHiveAuthNote(null);
+  }, [isOpen]);
+
+  const signedInWithHiveAuth =
+    hideHiveAuth &&
+    (currentUser?.provider || '').toLowerCase() === 'hiveauth' &&
+    currentUser?.loginType !== 'web2' &&
+    currentUser?.loginType !== 'web3';
+  const hiveAuthMessage =
+    hiveAuthNote ||
+    (signedInWithHiveAuth ? 'Sign in again with Hive Keychain to approve transactions.' : null);
+
   const handleSwitchUser = async (user: LoggedInUser) => {
+    if (
+      hideHiveAuth &&
+      (user.provider || '').toLowerCase() === 'hiveauth' &&
+      user.loginType !== 'web2' &&
+      user.loginType !== 'web3'
+    ) {
+      setHiveAuthNote('Sign in to this account with Hive Keychain.');
+      return;
+    }
     setCurrentUser(user);
     // Web2 or Web3 users don't need aioha switching
     if (user.loginType === 'web2' || user.loginType === 'web3') {
@@ -292,6 +320,7 @@ export const SwitchUserModal: React.FC<
         enableWeb3Login={enableWeb3Login}
         onUpdateProfile={onUpdateProfile}
         hiveSignerVisible={hiveSignerVisible}
+        hiveAuthVisible={hiveAuthVisible}
       />
     );
   }
@@ -325,6 +354,12 @@ export const SwitchUserModal: React.FC<
               ✕
             </button>
           </div>
+
+          {hiveAuthMessage && (
+            <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+              {hiveAuthMessage}
+            </p>
+          )}
 
           <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
             {loggedInUsers.map((user) => (

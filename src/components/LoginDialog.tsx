@@ -8,7 +8,6 @@ import { FirebaseAuthService } from '../services/firebaseAuthService';
 import { Web3LoginDialog } from './Web3LoginDialog';
 import type { LoginDialogProps, Web2Config, Web2AuthResult, ReownConfig, Web3AuthResult } from '../types/auth';
 import QRCode from 'qrcode';
-import { Providers } from '@aioha/aioha';
 import KeychainIcon from '../assets/keychain.svg';
 import HiveAuthIcon from '../assets/hiveauth-light.svg';
 import HiveSignerIcon from '../assets/hivesigner.svg';
@@ -27,6 +26,8 @@ import {
   type PeakLockAccount,
 } from '../utils/peakLockStorage';
 import { iosSafeHasUrl, isIosHiveAuthDevice } from '../utils/hasDeepLink';
+import { shouldHideHiveAuth } from '../utils/keychainMobileBrowser';
+import { useKeychainPresence } from '../hooks/useKeychainPresence';
 
 export const LoginDialog: React.FC<
   LoginDialogProps & {
@@ -58,6 +59,7 @@ export const LoginDialog: React.FC<
   enableWeb3Login = true,
   onUpdateProfile,
   hiveSignerVisible = false,
+  hiveAuthVisible,
 }) => {
   // Web2 state
   const [web2Loading, setWeb2Loading] = useState<'google' | 'apple' | null>(null);
@@ -85,8 +87,11 @@ export const LoginDialog: React.FC<
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
-  const [isKeychainEnabled, setIsKeychainEnabled] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Re-probe when the dialog opens. Keychain often injects shortly after load.
+  const keychain = useKeychainPresence(isOpen);
+  const isKeychainEnabled = keychain.injected;
+  const hideHiveAuth = shouldHideHiveAuth(keychain, hiveAuthVisible);
 
   const hasWeb2Config = enableWeb2Login === true && !!web2Config && !!onWeb2Authenticate;
   const hasWeb3Config = enableWeb3Login === true;
@@ -117,25 +122,19 @@ export const LoginDialog: React.FC<
   }, [username]);
 
   useEffect(() => {
-    if (hiveAuthPayload) {
+    if (hiveAuthPayload && !hideHiveAuth) {
       handleHiveAuthRequest(hiveAuthPayload);
     }
-  }, [hiveAuthPayload]);
+  }, [hiveAuthPayload, hideHiveAuth]);
 
   useEffect(() => {
-    const check = async () => {
-      await new Promise((res) => setTimeout(res, 500));
-      const isEnabled = aioha.isProviderEnabled(Providers.Keychain);
-      setIsKeychainEnabled(isEnabled);
-    };
-
-    if (document.readyState === 'complete') {
-      check();
-    } else {
-      window.addEventListener('load', check);
-      return () => window.removeEventListener('load', check);
-    }
-  }, []);
+    if (!hideHiveAuth) return;
+    if (selectedHiveMethod !== 'hiveauth' && !showQRCode) return;
+    setSelectedHiveMethod(isKeychainEnabled ? 'keychain' : 'none');
+    setShowQRCode(false);
+    setQrCodeDataUrl('');
+    setHiveAuthPayload(null);
+  }, [hideHiveAuth, isKeychainEnabled, selectedHiveMethod, showQRCode, setHiveAuthPayload]);
 
   const handleHiveAuthRequest = async (payload: string) => {
     try {
@@ -224,6 +223,11 @@ export const LoginDialog: React.FC<
     }
     if (method === 'privateKey' && !privateKey.trim()) {
       setError('Please enter your private posting key');
+      return;
+    }
+    if (method === 'hiveauth' && hideHiveAuth) {
+      setError('Sign in with Hive Keychain.');
+      setSelectedHiveMethod(isKeychainEnabled ? 'keychain' : 'none');
       return;
     }
 
@@ -462,7 +466,9 @@ export const LoginDialog: React.FC<
                   {isKeychainEnabled && (
                     <img src={KeychainIcon} alt="Keychain" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
                   )}
-                  <img src={HiveAuthIcon} alt="HiveAuth" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  {!hideHiveAuth && (
+                    <img src={HiveAuthIcon} alt="HiveAuth" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
+                  )}
                   {hiveSignerVisible && (
                     <img src={HiveSignerIcon} alt="HiveSigner" className="w-7 h-7 rounded-full bg-zinc-950 p-1 border-2 border-zinc-900" />
                   )}
@@ -471,7 +477,9 @@ export const LoginDialog: React.FC<
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-bold text-sm text-zinc-100">Hive Login</div>
-                  <div className="text-xs text-zinc-400">Keychain, HiveAuth, Private Key & more</div>
+                  <div className="text-xs text-zinc-400">
+                    {hideHiveAuth ? 'Keychain, Private Key & more' : 'Keychain, HiveAuth, Private Key & more'}
+                  </div>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
@@ -609,12 +617,20 @@ export const LoginDialog: React.FC<
                 <span className="text-xl">🐝</span>
                 <div>
                   <h4 className="font-bold text-base text-zinc-100">Hive Login</h4>
-                  <p className="text-xs text-zinc-400">Connect using Keychain, HiveAuth, or Keys</p>
+                  <p className="text-xs text-zinc-400">
+                    {hideHiveAuth ? 'Connect with Hive Keychain or a key' : 'Connect using Keychain, HiveAuth, or Keys'}
+                  </p>
                 </div>
               </div>
 
+              {hideHiveAuth && selectedHiveMethod === 'none' && !showQRCode && (
+                <p className="text-xs text-amber-200/90 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                  Hive Keychain is available in this browser. Sign in with Hive Keychain.
+                </p>
+              )}
+
               {/* QR Code Active View */}
-              {showQRCode && hiveAuthPayload ? (
+              {showQRCode && hiveAuthPayload && !hideHiveAuth ? (
                 <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-center space-y-3">
                   <h5 className="font-bold text-sm text-zinc-200">HiveAuth Mobile Approval</h5>
                   <p className="text-xs text-zinc-400">Scan QR code with your HiveAuth app</p>
@@ -659,7 +675,9 @@ export const LoginDialog: React.FC<
                 <div className="grid grid-cols-2 gap-3">
                   {isKeychainEnabled && (
                     <button
-                      className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                      className={`p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer ${
+                        hideHiveAuth ? 'border-red-500/70' : 'border-zinc-800'
+                      }`}
                       onClick={() => {
                         setError(null);
                         setSelectedHiveMethod('keychain');
@@ -670,16 +688,18 @@ export const LoginDialog: React.FC<
                     </button>
                   )}
 
-                  <button
-                    className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
-                    onClick={() => {
-                      setError(null);
-                      setSelectedHiveMethod('hiveauth');
-                    }}
-                  >
-                    <img src={HiveAuthIcon} alt="HiveAuth" className="w-9 h-9 transition-transform group-hover:scale-110" />
-                    <span className="font-semibold text-xs text-zinc-200">HiveAuth Mobile</span>
-                  </button>
+                  {!hideHiveAuth && (
+                    <button
+                      className="p-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(227,19,55,0.2)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
+                      onClick={() => {
+                        setError(null);
+                        setSelectedHiveMethod('hiveauth');
+                      }}
+                    >
+                      <img src={HiveAuthIcon} alt="HiveAuth" className="w-9 h-9 transition-transform group-hover:scale-110" />
+                      <span className="font-semibold text-xs text-zinc-200">HiveAuth Mobile</span>
+                    </button>
+                  )}
 
                   {hiveSignerVisible && (
                     <button
