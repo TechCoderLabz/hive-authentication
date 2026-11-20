@@ -76,3 +76,28 @@ export async function withWeb2SignInGuard<T>(
     if (timer) clearTimeout(timer);
   }
 }
+
+/**
+ * Turn a Firebase session created by the host's native Firebase SDK into a
+ * `Web2AuthResult`, without any Firebase web SDK call. Returns null when the
+ * native result carries no session (the caller then falls back to
+ * `signInWithCredential`).
+ */
+export function web2ResultFromNativeSession(
+  provider: 'google' | 'apple',
+  native: { firebaseSession?: { idToken?: string; uid?: string; email?: string | null; displayName?: string | null; photoURL?: string | null } } | null | undefined
+): { provider: 'google' | 'apple'; uid: string; email: string | null; displayName: string | null; photoURL: string | null; idToken: string } | null {
+  const session = native?.firebaseSession;
+  if (!session) return null;
+  if (!session.idToken || !session.uid) {
+    throw new Error(`${provider === 'apple' ? 'Apple' : 'Google'} sign-in did not return a Firebase session. Please try again.`);
+  }
+  return {
+    provider,
+    uid: session.uid,
+    email: session.email ?? null,
+    displayName: session.displayName ?? null,
+    photoURL: session.photoURL ?? null,
+    idToken: session.idToken,
+  };
+}

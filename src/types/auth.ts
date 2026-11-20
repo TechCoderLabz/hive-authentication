@@ -169,9 +169,14 @@ export interface Web2Config {
   /**
    * Native sign-in hook for WebView shells (e.g. Capacitor iOS/Android), where
    * the Firebase web popup cannot complete. When set, Google/Apple sign-in calls
-   * this instead of `signInWithPopup`, then signs the Firebase web SDK in with
-   * the returned provider credential (`signInWithCredential`), so the resulting
-   * ID token comes from the same Firebase project as on the web.
+   * this instead of `signInWithPopup`.
+   * - If it returns `firebaseSession` (the host signed in with the native
+   *   Firebase SDK), that ID token is used as-is and the Firebase web SDK is
+   *   not touched. Prefer this: web SDK calls from a WebView carry a
+   *   `capacitor://localhost` / `https://localhost` referrer, which a
+   *   referrer-restricted web API key rejects.
+   * - Otherwise the web SDK is signed in with the returned provider
+   *   credential (`signInWithCredential`).
    * Reject with a "canceled" error when the user dismisses the native sheet.
    */
   nativeSignIn?: (provider: Web2NativeProvider) => Promise<Web2NativeCredential>;
@@ -188,6 +193,21 @@ export interface Web2NativeCredential {
   rawNonce?: string;
   /** Google OAuth access token, when available. */
   accessToken?: string;
+  /**
+   * A Firebase session the host already created with the native Firebase SDK
+   * (same project as `projectId`). When present, the provider tokens above
+   * are ignored and no Firebase web SDK call is made.
+   */
+  firebaseSession?: Web2NativeFirebaseSession;
+}
+
+export interface Web2NativeFirebaseSession {
+  /** Firebase ID token (JWT issued by securetoken.google.com/<projectId>). */
+  idToken: string;
+  uid: string;
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
 }
 
 export interface Web2AuthResult {

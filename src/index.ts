@@ -72,6 +72,7 @@ export type {
   Web2AuthResult,
   Web2NativeProvider,
   Web2NativeCredential,
+  Web2NativeFirebaseSession,
   ReownConfig,
   Web3AuthResult,
   AuthButtonProps,

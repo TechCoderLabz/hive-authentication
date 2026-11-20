@@ -5,6 +5,7 @@ import {
   WEB2_TIMEOUT_MESSAGE,
   isWeb2CancelError,
   withWeb2SignInGuard,
+  web2ResultFromNativeSession,
 } from './web2SignIn.ts'
 
 // Cancel detection
@@ -36,5 +37,15 @@ await assert.rejects(
 // Other errors pass through unchanged
 const boom = new Error('boom')
 await assert.rejects(withWeb2SignInGuard(async () => { throw boom }, 1000), (err: unknown) => err === boom)
+
+// Native Firebase session: used as-is, no web SDK involved
+assert.equal(web2ResultFromNativeSession('google', { }), null)
+assert.equal(web2ResultFromNativeSession('google', undefined), null)
+assert.deepEqual(
+  web2ResultFromNativeSession('apple', { firebaseSession: { idToken: 'tok', uid: 'u1', email: 'a@b.c' } }),
+  { provider: 'apple', uid: 'u1', email: 'a@b.c', displayName: null, photoURL: null, idToken: 'tok' }
+)
+assert.throws(() => web2ResultFromNativeSession('google', { firebaseSession: { idToken: '', uid: 'u1' } }), /did not return a Firebase session/)
+assert.throws(() => web2ResultFromNativeSession('apple', { firebaseSession: { idToken: 'tok', uid: '' } }), /Apple sign-in/)
 
 console.log('web2SignIn tests passed')
