@@ -166,6 +166,28 @@ export interface Web2Config {
   messagingSenderId?: string;
   appId: string;
   measurementId?: string;
+  /**
+   * Native sign-in hook for WebView shells (e.g. Capacitor iOS/Android), where
+   * the Firebase web popup cannot complete. When set, Google/Apple sign-in calls
+   * this instead of `signInWithPopup`, then signs the Firebase web SDK in with
+   * the returned provider credential (`signInWithCredential`), so the resulting
+   * ID token comes from the same Firebase project as on the web.
+   * Reject with a "canceled" error when the user dismisses the native sheet.
+   */
+  nativeSignIn?: (provider: Web2NativeProvider) => Promise<Web2NativeCredential>;
+  /** Timeout for one Google/Apple sign-in attempt, in ms. Default 60000. 0 disables it. */
+  signInTimeoutMs?: number;
+}
+
+export type Web2NativeProvider = 'google' | 'apple';
+
+export interface Web2NativeCredential {
+  /** Provider ID token (Google ID token or Apple identity token). */
+  idToken?: string;
+  /** Raw (unhashed) nonce used for Apple sign-in. Required for Apple. */
+  rawNonce?: string;
+  /** Google OAuth access token, when available. */
+  accessToken?: string;
 }
 
 export interface Web2AuthResult {

@@ -51,6 +51,13 @@ export {
   isNativeAppShell,
   isMobileBrowserDevice,
 } from './utils/keychainMobileBrowser';
+// Google/Apple sign-in guard (timeout + friendly cancel)
+export {
+  Web2SignInCancelledError,
+  isWeb2CancelError,
+  DEFAULT_WEB2_SIGN_IN_TIMEOUT_MS,
+} from './utils/web2SignIn';
+
 export type { KeychainBrowserSnapshot, KeychainPresence } from './utils/keychainMobileBrowser';
 
 // Types
@@ -63,6 +70,8 @@ export type {
   LoginDialogProps,
   Web2Config,
   Web2AuthResult,
+  Web2NativeProvider,
+  Web2NativeCredential,
   ReownConfig,
   Web3AuthResult,
   AuthButtonProps,
