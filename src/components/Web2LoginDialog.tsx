@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FirebaseAuthService } from '../services/firebaseAuthService';
+import React, { useEffect, useState } from 'react';
+import { loginWithWeb2Provider, prefetchFirebaseAuthModule } from '../services/web2ProviderSignIn';
 import { useAuthStore } from '../store/authStore';
 import type { Web2Config, Web2AuthResult } from '../types/auth';
 
@@ -31,6 +31,12 @@ export const Web2LoginDialog: React.FC<Web2LoginDialogProps> = ({
 
   const { authenticateWeb2WithCallback } = useAuthStore();
 
+  // Prefetch the Firebase web sign-in code while the dialog is open so the
+  // click can open the popup synchronously (see web2ProviderSignIn.ts).
+  useEffect(() => {
+    if (isOpen && !web2Config.nativeSignIn) prefetchFirebaseAuthModule();
+  }, [isOpen, web2Config]);
+
   const hasCustomLoginColors = loginButtonColors && loginButtonColors.length > 0;
 
   const loginButtonStyle = hasCustomLoginColors
@@ -51,7 +57,7 @@ export const Web2LoginDialog: React.FC<Web2LoginDialogProps> = ({
     setError(null);
     setLoadingAction('google');
     try {
-      const result = await FirebaseAuthService.loginWithGoogle(web2Config);
+      const result = await loginWithWeb2Provider(web2Config, 'google');
       await handleWeb2Auth(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google login failed';
@@ -65,7 +71,7 @@ export const Web2LoginDialog: React.FC<Web2LoginDialogProps> = ({
     setError(null);
     setLoadingAction('apple');
     try {
-      const result = await FirebaseAuthService.loginWithApple(web2Config);
+      const result = await loginWithWeb2Provider(web2Config, 'apple');
       await handleWeb2Auth(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Apple login failed';

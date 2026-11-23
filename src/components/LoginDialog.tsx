@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import { AuthService } from '../services/authService';
-import { FirebaseAuthService } from '../services/firebaseAuthService';
-import { Web3LoginDialog } from './Web3LoginDialog';
+import { loginWithWeb2Provider, prefetchFirebaseAuthModule } from '../services/web2ProviderSignIn';
 import type { LoginDialogProps, Web2Config, Web2AuthResult, ReownConfig, Web3AuthResult } from '../types/auth';
 import QRCode from 'qrcode';
 import KeychainIcon from '../assets/keychain.svg';
@@ -28,6 +27,12 @@ import {
 import { iosSafeHasUrl, isIosHiveAuthDevice } from '../utils/hasDeepLink';
 import { shouldHideHiveAuth } from '../utils/keychainMobileBrowser';
 import { useKeychainPresence } from '../hooks/useKeychainPresence';
+
+// Loaded only when the user opens the Web3 view: it pulls in Reown AppKit,
+// WalletConnect and ethers, which most people never need.
+const Web3LoginDialog = lazy(() =>
+  import('./Web3LoginDialog').then((m) => ({ default: m.Web3LoginDialog }))
+);
 
 export const LoginDialog: React.FC<
   LoginDialogProps & {
@@ -184,13 +189,23 @@ export const LoginDialog: React.FC<
     }
   }, [isOpen, hasMultipleOptions]);
 
+  // Prefetch the Firebase web sign-in code as soon as the Google/Apple view is
+  // shown, so the button click can open the popup synchronously (popup
+  // blockers reject popups opened after an await). Native shells sign in
+  // through `nativeSignIn` and never need it.
+  useEffect(() => {
+    if (isOpen && mainView === 'web2' && web2Config && !web2Config.nativeSignIn) {
+      prefetchFirebaseAuthModule();
+    }
+  }, [isOpen, mainView, web2Config]);
+
   // Web2 Authentication Handlers
   const handleGoogleLogin = async () => {
     if (!web2Config || !onWeb2Authenticate) return;
     setError(null);
     setWeb2Loading('google');
     try {
-      const result = await FirebaseAuthService.loginWithGoogle(web2Config);
+      const result = await loginWithWeb2Provider(web2Config, 'google');
       await authenticateWeb2WithCallback(result, onWeb2Authenticate);
       onClose();
     } catch (err: any) {
@@ -205,7 +220,7 @@ export const LoginDialog: React.FC<
     setError(null);
     setWeb2Loading('apple');
     try {
-      const result = await FirebaseAuthService.loginWithApple(web2Config);
+      const result = await loginWithWeb2Provider(web2Config, 'apple');
       await authenticateWeb2WithCallback(result, onWeb2Authenticate);
       onClose();
     } catch (err: any) {
@@ -580,6 +595,13 @@ export const LoginDialog: React.FC<
 
           {/* WEB3 VIEW: Reown multi-chain Web3 login */}
           {mainView === 'web3' && (
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-10">
+                  <span className="loading loading-spinner loading-md text-red-500"></span>
+                </div>
+              }
+            >
             <Web3LoginDialog
               isOpen={true}
               embedded={true}
@@ -596,6 +618,7 @@ export const LoginDialog: React.FC<
               loginButtonColors={loginButtonColors}
               loginButtonTextColor={loginButtonTextColor}
             />
+            </Suspense>
           )}
 
           {/* HIVE VIEW: Keychain, HiveAuth, Private Key, PeakLock */}

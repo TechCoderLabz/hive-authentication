@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CryptoJS from 'crypto-js';
-import { LoginDialog } from './LoginDialog';
-import { ProfileEditModal } from './ProfileEditModal';
 import { useAuthStore } from '../store/authStore';
 import type { LoggedInUser, SwitchUserModalProps, ReownConfig, Web3AuthResult } from '../types/auth';
 import { AuthService } from '../services/authService';
@@ -23,6 +21,10 @@ import RainbowIcon from '../assets/rainbow.svg';
 import WalletConnectIcon from '../assets/walletconnect.svg';
 import { shouldHideHiveAuth } from '../utils/keychainMobileBrowser';
 import { useKeychainPresence } from '../hooks/useKeychainPresence';
+
+// Loaded on demand ("Add account" / edit profile), see AuthButton.tsx.
+const LoginDialog = lazy(() => import('./LoginDialog').then((m) => ({ default: m.LoginDialog })));
+const ProfileEditModal = lazy(() => import('./ProfileEditModal').then((m) => ({ default: m.ProfileEditModal })));
 
 export const SwitchUserModal: React.FC<
   SwitchUserModalProps & {
@@ -300,6 +302,7 @@ export const SwitchUserModal: React.FC<
 
   if (showAddAccount) {
     return (
+      <Suspense fallback={null}>
       <LoginDialog
         isOpen={true}
         onClose={handleBackFromLogin}
@@ -322,6 +325,7 @@ export const SwitchUserModal: React.FC<
         hiveSignerVisible={hiveSignerVisible}
         hiveAuthVisible={hiveAuthVisible}
       />
+      </Suspense>
     );
   }
 
@@ -484,6 +488,7 @@ export const SwitchUserModal: React.FC<
 
       {/* Profile Edit Modal */}
       {editingUser && (
+        <Suspense fallback={null}>
         <ProfileEditModal
           isOpen={Boolean(editingUser)}
           user={editingUser}
@@ -491,6 +496,7 @@ export const SwitchUserModal: React.FC<
           onUpdateProfile={onUpdateProfile}
           theme={theme}
         />
+        </Suspense>
       )}
     </>
   );

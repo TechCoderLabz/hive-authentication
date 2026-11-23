@@ -1,9 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import CryptoJS from "crypto-js";
 import { useAuthStore } from "../store/authStore";
-import { LoginDialog } from "./LoginDialog";
-import { SwitchUserModal } from "./SwitchUserModal";
-import { ProfileEditModal } from "./ProfileEditModal";
+
+// The dialogs are loaded on demand. LoginDialog pulls in the Hive login
+// methods, QR codes and (lazily) Google/Apple and Web3 code; none of it is
+// needed until the user taps the button, so it stays out of the host app's
+// first download. Hovering/focusing/touching the button starts the download
+// early so the dialog opens without a visible delay.
+const loadLoginDialog = () => import("./LoginDialog");
+const loadSwitchUserModal = () => import("./SwitchUserModal");
+const LoginDialog = lazy(() => loadLoginDialog().then((m) => ({ default: m.LoginDialog })));
+const SwitchUserModal = lazy(() => loadSwitchUserModal().then((m) => ({ default: m.SwitchUserModal })));
+const ProfileEditModal = lazy(() => import("./ProfileEditModal").then((m) => ({ default: m.ProfileEditModal })));
 import type { AuthButtonProps } from "../types/auth";
 
 export const AuthButton: React.FC<
@@ -74,6 +82,10 @@ export const AuthButton: React.FC<
     }
   };
 
+  const preloadDialog = () => {
+    (currentUser ? loadSwitchUserModal() : loadLoginDialog()).catch(() => {});
+  };
+
   const getAvatarUrl = () => {
     if (currentUser?.photoURL) {
       return currentUser.photoURL;
@@ -134,6 +146,9 @@ export const AuthButton: React.FC<
             theme === "dark" ? "text-gray-300" : "text-gray-700"
           }`}
           onClick={handleButtonClick}
+          onPointerEnter={preloadDialog}
+          onFocus={preloadDialog}
+          onTouchStart={preloadDialog}
           id="user-button"
         >
           <div className="avatar">
@@ -173,11 +188,16 @@ export const AuthButton: React.FC<
           }`}
           style={loginButtonStyle}
           onClick={handleButtonClick}
+          onPointerEnter={preloadDialog}
+          onFocus={preloadDialog}
+          onTouchStart={preloadDialog}
         >
           Login
         </button>
       )}
 
+      {isLoginDialogOpen && (
+      <Suspense fallback={null}>
       <LoginDialog
         isOpen={isLoginDialogOpen}
         onClose={() => {
@@ -201,7 +221,11 @@ export const AuthButton: React.FC<
         hiveSignerVisible={hiveSignerVisible}
         hiveAuthVisible={hiveAuthVisible}
       />
+      </Suspense>
+      )}
 
+      {isSwitchUserModalOpen && (
+      <Suspense fallback={null}>
       <SwitchUserModal
         isOpen={isSwitchUserModalOpen}
         shouldShowSwitchUser={shouldShowSwitchUser ?? true}
@@ -226,9 +250,12 @@ export const AuthButton: React.FC<
         hiveSignerVisible={hiveSignerVisible}
         hiveAuthVisible={hiveAuthVisible}
       />
+      </Suspense>
+      )}
 
       {/* Auto-Prompt Profile Setup Modal if user has no display name */}
       {isProfileSetupOpen && currentUser && (
+        <Suspense fallback={null}>
         <ProfileEditModal
           isOpen={isProfileSetupOpen}
           user={currentUser}
@@ -236,6 +263,7 @@ export const AuthButton: React.FC<
           onUpdateProfile={onUpdateProfile}
           theme={theme}
         />
+        </Suspense>
       )}
     </>
   );
