@@ -131,6 +131,22 @@ async function providerSignIn(config: Web2Config, provider: Web2NativeProvider):
   }
 }
 
+/**
+ * Credential half of the native path, for callers that already ran the host's
+ * `nativeSignIn` hook (and its timeout guard) themselves and got provider
+ * tokens instead of a `firebaseSession`. Used by the lazy loader in
+ * `web2ProviderSignIn.ts`, so this module (and the Firebase web SDK) is only
+ * loaded when that fallback is actually needed.
+ */
+export async function signInWithNativeCredential(
+  config: Web2Config,
+  provider: Web2NativeProvider,
+  native: Web2NativeCredential
+): Promise<Web2AuthResult> {
+  const cred = await nativeCredentialSignIn(getFirebaseAuth(config), provider, native);
+  return resultFromCredential(provider, cred, await cred.user.getIdToken());
+}
+
 export const FirebaseAuthService = {
   async loginWithGoogle(config: Web2Config): Promise<Web2AuthResult> {
     return providerSignIn(config, 'google');
